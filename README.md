@@ -4,9 +4,9 @@
 
 **Consyzer** is a CLI utility designed to prevent CIL module consistency issues when using P/Invoke mechanisms to call methods implemented outside the managed CLR environment.
 
-## What for?
+## Purpose
 
-In CIL application development, it is not uncommon to need access to methods implemented outside the managed .NET ecosystem. In the source code of a CIL module, such calls are described using the **DllImport** or **LibraryImport** attributes and are stored in the module's metadata after compilation, indicating which unmanaged (native) library should be loaded at runtime and which function should be called from it.
+In CIL application development, it is not uncommon to need access to methods implemented outside the managed .NET ecosystem. In the source code of a CIL module, such calls are described using **DllImport** or **LibraryImport** attributes and are stored in the module's metadata after compilation, indicating which unmanaged (native) library should be loaded at runtime and which function should be called from it.
 
 A key feature of such calls is that the function code from the unmanaged library is not linked directly with the CIL module's code;
 instead, the module's metadata stores information about the function being called, including a reference to the expected location of the unmanaged library containing the implementation of that function on the system.
@@ -29,10 +29,10 @@ however, if even one of the libraries is missing, the application will not only 
 
 Consyzer was created to ensure that such situations do not come as a surprise.
 
-## How does it work?
+## How it works
 
 1. Consyzer selects files for analysis based on the specified directory and search pattern;
-2. Consyzer logs and excludes from analysis any files that are not ECMA-355 assemblies;
+2. Consyzer logs and excludes any files that are not ECMA-355 assemblies from the analysis;
 3. Consyzer analyzes the remaining ECMA assemblies for the presence of P/Invoke calls;
 4. Consyzer analyzes each found P/Invoke method and checks whether the corresponding native libraries exist in the system;
 5. Consyzer generates a report based on the analysis results in one or more formats depending on the configuration;
@@ -132,17 +132,17 @@ The following report formats are supported:
 > Negative codes signal configuration errors or failures that occurred during the utility’s execution.  
 > The lower the code, the **further the utility progressed before the error occurred**.
 
-## How to run?
+## Usage
 
 **Consyzer** is run from the command line (CLI) and requires two mandatory parameters:
 
-1. `--AnalysisDirectory` — sets the directory containing CIL modules to analyze;
-2. `--SearchPattern` — sets the search pattern for CIL modules to analyze.
+1. `--AnalysisDirectory` — specifies the directory containing CIL modules to analyze;
+2. `--SearchPattern` — specifies the search pattern for CIL modules to analyze.
 
 You can also specify two optional parameters:
 
 1. `--RecursiveSearch` — specifies whether to search for CIL modules in subdirectories. Default: `false`.
-2. `--OutputFormat` — sets the report output format (`Console`, `Json`, `Csv`, `Xml`). Multiple values supported via comma. Default: `Console`.
+2. `--OutputFormat` — specifies the report output format (`Console`, `Json`, `Csv`, `Xml`). Multiple values supported via comma. Default: `Console`.
 
 ### General usage pattern
 
