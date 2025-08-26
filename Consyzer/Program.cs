@@ -27,6 +27,17 @@ var configuration = new ConfigurationBuilder()
 var rawOptions = configuration.Get<AnalysisOptions>()!;
 
 var serviceProvider = new ServiceCollection()
+    // Options
+    .Configure<AnalysisOptions>(configuration)
+    .Configure<AppOptions>(configuration)
+
+    // Resources
+    .AddSingleton<IResourceAccessor<FileInfo, Stream>, FileStreamAccessor>()
+    .AddSingleton<IResourceAccessor<FileInfo, PEReader>, PEReaderAccessor>()
+
+    // Cryptography
+    .AddScoped<IFileHasher, Sha256FileHasher>()
+
     // Logging
     .AddLogging(builder =>
     {
@@ -34,16 +45,6 @@ var serviceProvider = new ServiceCollection()
         builder.AddNLog();
     })
     .AddSingleton<IAnalysisLogBuilder, AnalysisLogBuilder>()
-
-    // Reporting
-    .AddReportWriters(rawOptions.OutputFormat)
-
-    // Analyzers
-    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification>, FileClassificationAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>>, AssemblyMetadataAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<PInvokeMethodGroup>>, PInvokeMethodAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<PInvokeMethodGroup>, IEnumerable<LibraryPresence>>, LibraryPresenceAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<LibraryPresence>, LibraryLocationKind>, LibraryPresenceStatusAnalyzer>()
 
     // Extractors
     .AddScoped<IExtractor<FileInfo, IEnumerable<PInvokeMethod>>, PInvokeMethodExtractor>()
@@ -53,19 +54,18 @@ var serviceProvider = new ServiceCollection()
     // Classifiers
     .AddScoped<IFileClassifier<AnalysisFileClassification>, AnalysisFileClassifier>()
 
-    // Cryptography
-    .AddSingleton<IFileHasher, Sha256FileHasher>()
+    // Analyzers
+    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification>, FileClassificationAnalyzer>()
+    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>>, AssemblyMetadataAnalyzer>()
+    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<PInvokeMethodGroup>>, PInvokeMethodAnalyzer>()
+    .AddScoped<IAnalyzer<IEnumerable<PInvokeMethodGroup>, IEnumerable<LibraryPresence>>, LibraryPresenceAnalyzer>()
+    .AddScoped<IAnalyzer<IEnumerable<LibraryPresence>, LibraryLocationKind>, LibraryPresenceStatusAnalyzer>()
 
-    // Resources
-    .AddSingleton<IResourceAccessor<FileInfo, Stream>, FileStreamAccessor>()
-    .AddSingleton<IResourceAccessor<FileInfo, PEReader>, PEReaderAccessor>()
+    // Reporting
+    .AddReportWriters(rawOptions.OutputFormat)
 
     // Orchestrator
-    .AddSingleton<AnalysisOrchestrator>()
-
-    // Options
-    .Configure<AnalysisOptions>(configuration)
-    .Configure<AppOptions>(configuration)
+    .AddScoped<AnalysisOrchestrator>()
 
     .BuildServiceProvider();
 
