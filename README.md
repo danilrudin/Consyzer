@@ -2,7 +2,7 @@
 
 This README is available in other languages:
 
-- [Русский](./README-RU.md)
+- [Русский](./docs/README-RU.md)
 
 ## Overview
 
