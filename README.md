@@ -1,4 +1,8 @@
-[![Build Status](https://github.com/danilrudin/Consyzer/workflows/Build/badge.svg)](https://github.com/danilrudin/Consyzer/actions/workflows/build.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=coverage)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![GitHub license](https://badgen.net/github/license/danilrudin/Consyzer)](https://github.com/danilrudin/Consyzer/blob/master/LICENSE)
+[![Build Status](https://github.com/danilrudin/Consyzer/workflows/Build/badge.svg)](https://github.com/danilrudin/Consyzer/actions/workflows/build.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=coverage)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![GitHub license](https://img.shields.io/github/license/danilrudin/Consyzer)](https://github.com/danilrudin/Consyzer/blob/master/LICENSE)
+
+This README is available in other languages:
+
+- [Русский](./README-RU.md)
 
 ## Overview
 
@@ -158,6 +162,6 @@ Consyzer.exe --AnalysisDirectory C:\Modules --SearchPattern "*.dll, *.exe" --Rec
 
 ## Analyzing multiple projects in a solution
 
-You can use [this](https://github.com/danilrudin/Consyzer/blob/master/DevOps/Scripts/SolutionAnalyzer.ps1) PowerShell script to analyze the output artifacts of all projects in a solution.
+You can use [this](./DevOps/Scripts/SolutionAnalyzer.ps1) PowerShell script to analyze the output artifacts of all projects in a solution.
 
 This script can also be used in a **CI/CD pipeline**.
