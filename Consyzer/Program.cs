@@ -62,7 +62,7 @@ var serviceProvider = new ServiceCollection()
     .AddScoped<IAnalyzer<IEnumerable<LibraryPresence>, LibraryLocationKind>, LibraryPresenceStatusAnalyzer>()
 
     // Reporting
-    .AddReportWriters(rawOptions.OutputFormat)
+    .AddReportWriters(rawOptions.OutputFormats)
 
     // Orchestrator
     .AddScoped<AnalysisOrchestrator>()

@@ -34,7 +34,7 @@ AnalysisSummary:
   -solutionForAnalysis "C:\Path\To\RepoRoot" `
   -searchPatterns "*.exe, *.dll" `
   -recursiveSearch $false `
-  -outputFormat "Console" `
+  -outputFormats "Console" `
   -buildConfiguration "Release"
 ```
 
@@ -44,7 +44,7 @@ Arguments:
 - `-solutionForAnalysis` – Path to the folder containing the built solution (e.g. the repository root).
 - `-searchPatterns` – Comma-separated list of file patterns to scan. Default: `"*.exe, *.dll"`
 - `-recursiveSearch` – Whether to search subdirectories for matching files. Default: `false`
-- `-outputFormat` – Output format(s) for reports. Supports multiple values separated by commas. Default: `"Console"`
+- `-outputFormats` – Comma-separated list of report output formats. Default: `"Console"`
 - `-buildConfiguration` – Build configuration folder to target. Default: `"Release"`
 
 ### Azure Pipelines
@@ -61,7 +61,7 @@ To use this in Azure Pipelines:
       -solutionForAnalysis "$(Build.SourcesDirectory)"
       -searchPatterns "*.exe, *.dll"
       -recursiveSearch $false
-      -outputFormat "Console"
+      -outputFormats "Console"
       -buildConfiguration "Release"
   displayName: "Run Consyzer on all solution outputs"
 ```

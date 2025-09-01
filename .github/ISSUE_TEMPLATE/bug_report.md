@@ -36,7 +36,7 @@ labels: bug
   - AnalysisDirectory:
   - SearchPatterns:
   - RecursiveSearch:
-  - OutputFormat:
+  - OutputFormats:
 - appsettings.json:
 
 ## Additional context

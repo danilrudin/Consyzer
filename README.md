@@ -150,18 +150,18 @@ The following report formats are supported:
 You can also specify two optional parameters:
 
 1. `--RecursiveSearch` — specifies whether to search for CIL modules in subdirectories. Default: `false`.
-2. `--OutputFormat` — specifies the report output format (`Console`, `Json`, `Csv`, `Xml`). Multiple values supported via comma. Default: `Console`.
+2. `--OutputFormats` — specifies the report output formats (`Console`, `Json`, `Csv`, `Xml`) as a comma-separated list. Default: `Console`.
 
 ### General usage pattern
 
 ```
-Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--OutputFormat Console, Json, Csv, Xml]
+Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--OutputFormats Console, Json, Csv, Xml]
 ```
 
 ### Example
 
 ```
-Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll, *.exe" --RecursiveSearch true --OutputFormat Console, Json
+Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll, *.exe" --RecursiveSearch true --OutputFormats Console, Json
 ```
 
 ## Analyzing multiple projects in a solution

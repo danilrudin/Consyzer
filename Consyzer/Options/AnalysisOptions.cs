@@ -5,5 +5,5 @@ internal sealed class AnalysisOptions
     public required string AnalysisDirectory { get; set; }
     public required string SearchPatterns { get; set; }
     public required bool RecursiveSearch { get; set; }
-    public required OutputFormats OutputFormat { get; set; } = OutputFormats.Console;
+    public required OutputFormats OutputFormats { get; set; } = OutputFormats.Console;
 }
