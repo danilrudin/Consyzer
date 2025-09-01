@@ -1,75 +1,104 @@
 param(
-    [Parameter(Mandatory = $true, HelpMessage = "Path to Consyzer executable.")]
-    [ValidateScript({ Test-Path $_ -PathType Leaf })]
-    [string]$pathToConsyzer,
+	[Parameter(Mandatory = $true, HelpMessage = "Path to Consyzer executable.")]
+	[ValidateScript({ Test-Path $_ -PathType Leaf })]
+	[string]$pathToConsyzer,
 
-    [Parameter(Mandatory = $true, HelpMessage = "Path to the solution for analysis.")]
-    [ValidateScript({ Test-Path $_ -PathType Container })]
-    [string]$solutionForAnalysis,
+	[Parameter(Mandatory = $true, HelpMessage = "Path to the solution for analysis.")]
+	[ValidateScript({ Test-Path $_ -PathType Container })]
+	[string]$solutionForAnalysis,
 
-    [Parameter(HelpMessage = "File extensions to scan for. Default is '*.exe, *.dll'.")]
-    [string]$searchPatterns = "*.exe, *.dll",
+	[Parameter(HelpMessage = "File extensions to scan for. Default is '*.exe, *.dll'.")]
+	[string]$searchPatterns = "*.exe, *.dll",
 
-    [Parameter(HelpMessage = "Build configuration to use. Default is 'Release'.")]
-    [string]$buildConfiguration = "Release",
+	[Parameter(HelpMessage = "Build configuration to use. Default is 'Release'.")]
+	[string]$buildConfiguration = "Release",
 
-    [Parameter(HelpMessage = "Report output format. Default is 'Console'.")]
-    [string]$outputFormat = "Console",
+	[Parameter(HelpMessage = "Report output format. Default is 'Console'.")]
+	[string]$outputFormat = "Console",
 
-    [Parameter(HelpMessage = "Recursive search for CIL modules. Default is false.")]
-    [bool]$recursiveSearch = $false
+	[Parameter(HelpMessage = "Recursive search for CIL modules. Default is false.")]
+	[bool]$recursiveSearch = $false
 )
 
 Set-Location $solutionForAnalysis
 
 # Construct platform-independent regex to match bin/<Configuration> folders
-$regex = [Regex]::Escape("bin/$buildConfiguration").Replace("/", "[/\\\\]")
+$regex = "bin[\\/]" + [Regex]::Escape($buildConfiguration) + "[\\/][^\\/]+$"
 
 $analysisFolders = Get-ChildItem -Path . -Recurse -Directory |
-    Where-Object {
-        $_.FullName -match $regex
-    } |
-    Select-Object -ExpandProperty FullName -Unique
+	Where-Object { $_.FullName -match $regex } |
+	Select-Object -ExpandProperty FullName -Unique
 
-if ($analysisFolders.Length -eq 0) {
-    Write-Warning "No binary folders were found for analysis."
-    # Exit with -3 to match Consyzer's code for "no files matched the search patterns",
-    # since no valid output folders (bin/Release) were found to analyze
-    Exit -3
+if (-not $analysisFolders) {
+	Write-Warning "No build output folders found for analysis."
+	# Exit with -3 (NoFilesFound) to match Consyzer's exit codes,
+	# since no valid output folders (bin/<Configuration>) were found to analyze
+	Exit -3
 }
 
-$finalExitCode = -4
-$messageBuilder = New-Object System.Text.StringBuilder
+$finalExitCode = -5
+$results = @()
+$index = 0
 
 foreach ($folder in $analysisFolders) {
+    Write-Output ("[{0}] Analyzing:`n`t{1}" -f $index, $folder)
+    Write-Output ""
+
     & $pathToConsyzer `
         --AnalysisDirectory $folder `
-        --SearchPatterns     $searchPatterns `
-        --RecursiveSearch   $recursiveSearch `
-        --OutputFormat      $outputFormat
+        --SearchPatterns $searchPatterns `
+        --RecursiveSearch $recursiveSearch `
+        --OutputFormat $outputFormat
 
-    if ($LASTEXITCODE -ge $finalExitCode) {
+    if ($LASTEXITCODE -gt $finalExitCode) {
         $finalExitCode = $LASTEXITCODE
     }
 
     $message = switch ($LASTEXITCODE) {
-        -5 { "Error: $folder → no P/Invoke methods were found in the assemblies." }
-        -4 { "Error: $folder → none of the files were valid for analysis." }
-        -3 { "Error: $folder → no files matched the patterns." }
-        -2 { "Error: $folder → no search patterns were specified." }
-        -1 { "Error: $folder → no analysis directory was specified." }
-         0 { "Success: $folder → all libraries found in the analysis directory." }
-         1 { "Warning: $folder → one or more libraries were found in the system directory." }
-         2 { "Warning: $folder → one or more libraries were found via PATH." }
-         3 { "Warning: $folder → one or more libraries were found via absolute path." }
-         4 { "Warning: $folder → one or more libraries were found via relative path." }
-         5 { "Error: $folder → one or more libraries are missing from the system." }
-        default { "Unknown exit code ($LASTEXITCODE) for $folder." }
+        -5 { "Error: No P/Invoke methods were found in the assemblies." }
+        -4 { "Error: No valid files were found for analysis." }
+        -3 { "Error: No files were found in the directory matching the search patterns." }
+        -2 { "Error: No file search patterns were specified." }
+        -1 { "Error: No analysis directory was specified." }
+        0 { "Success: All libraries were found in the analyzed directory." }
+        1 { "Warning: One or more libraries were found in the system directory." }
+        2 { "Warning: One or more libraries were found via the PATH environment variable." }
+        3 { "Warning: One or more libraries were found by absolute path." }
+        4 { "Warning: One or more libraries were found by relative path." }
+        5 { "Error: One or more libraries were not found in the system." }
+        default { "Error: unexpected exit code ($LASTEXITCODE)." }
     }
 
-    $messageBuilder.AppendLine($message)
-    Write-Output "`nConsyzer exit code: $LASTEXITCODE`n"
+    $results += [PSCustomObject]@{
+        Index = $index
+        Path = $folder
+        ExitCode = $LASTEXITCODE
+        Message = $message
+    }
+
+    Write-Output ""
+    $index++
 }
 
-Write-Output $messageBuilder.ToString()
+# Output analysis summary in YAML format for easier parsing in CI/CD pipelines
+Write-Output "AnalysisSummary:"
+
+foreach ($r in $results) {
+    if ($r.Message -match "^(Error|Warning|Success): (.+)$") {
+        $status = $matches[1]
+        $msg = $matches[2]
+    } else {
+        $status = "Unknown"
+        $msg = $r.Message
+    }
+
+    Write-Output ("  - Index: {0}" -f $r.index)
+    Write-Output ("    ExitCode: {0}" -f $r.ExitCode)
+    Write-Output ("    Path: {0}" -f $r.Path)
+    Write-Output ("    Status: {0}" -f $status)
+    Write-Output ("    Message: {0}" -f $msg)
+    Write-Output ""
+}
+
+Write-Output ("Final exit code: {0}" -f $finalExitCode)
 Exit $finalExitCode
