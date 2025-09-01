@@ -17,7 +17,7 @@ internal sealed class AnalysisLogBuilder(
             .Title(Section.Bracketed.AnalysisOptions)
             .PushIndent()
             .Line(Label.Options.AnalysisDirectory, options.AnalysisDirectory)
-            .Line(Label.Options.SearchPattern, options.SearchPattern)
+            .Line(Label.Options.SearchPatterns, options.SearchPatterns)
             .PopIndent()
             .Build();
 

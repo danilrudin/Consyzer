@@ -74,21 +74,21 @@ var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
 if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
 {
-    logger.LogError("{Parameter} parameter is missing.", nameof(options.AnalysisDirectory));
+    logger.LogError("Required {Parameter} parameter is not specified.", nameof(options.AnalysisDirectory));
     return (int)AppFailureCode.NoAnalysisDirectory;
 }
 
-if (string.IsNullOrWhiteSpace(options.SearchPattern))
+if (string.IsNullOrWhiteSpace(options.SearchPatterns))
 {
-    logger.LogError("{Parameter} parameter is missing.", nameof(options.SearchPattern));
-    return (int)AppFailureCode.NoSearchPattern;
+    logger.LogError("Required {Parameter} parameter is not specified.", nameof(options.SearchPatterns));
+    return (int)AppFailureCode.NoSearchPatterns;
 }
 
 var orchestrator = serviceProvider.GetRequiredService<AnalysisOrchestrator>();
 
 var files = FileSearchHelper.GetFilesBySeparatedPatterns(
     options.AnalysisDirectory,
-    options.SearchPattern,
+    options.SearchPatterns,
     PatternSeparator,
     options.RecursiveSearch
 );

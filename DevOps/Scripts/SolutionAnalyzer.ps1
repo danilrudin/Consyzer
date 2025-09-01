@@ -8,7 +8,7 @@ param(
     [string]$solutionForAnalysis,
 
     [Parameter(HelpMessage = "File extensions to scan for. Default is '*.exe, *.dll'.")]
-    [string]$searchPattern = "*.exe, *.dll",
+    [string]$searchPatterns = "*.exe, *.dll",
 
     [Parameter(HelpMessage = "Build configuration to use. Default is 'Release'.")]
     [string]$buildConfiguration = "Release",
@@ -33,7 +33,7 @@ $analysisFolders = Get-ChildItem -Path . -Recurse -Directory |
 
 if ($analysisFolders.Length -eq 0) {
     Write-Warning "No binary folders were found for analysis."
-    # Exit with -3 to match Consyzer's code for "no files matched the search pattern",
+    # Exit with -3 to match Consyzer's code for "no files matched the search patterns",
     # since no valid output folders (bin/Release) were found to analyze
     Exit -3
 }
@@ -44,7 +44,7 @@ $messageBuilder = New-Object System.Text.StringBuilder
 foreach ($folder in $analysisFolders) {
     & $pathToConsyzer `
         --AnalysisDirectory $folder `
-        --SearchPattern     $searchPattern `
+        --SearchPatterns     $searchPatterns `
         --RecursiveSearch   $recursiveSearch `
         --OutputFormat      $outputFormat
 
@@ -55,8 +55,8 @@ foreach ($folder in $analysisFolders) {
     $message = switch ($LASTEXITCODE) {
         -5 { "Error: $folder → no P/Invoke methods were found in the assemblies." }
         -4 { "Error: $folder → none of the files were valid for analysis." }
-        -3 { "Error: $folder → no files matched the search pattern." }
-        -2 { "Error: $folder → no search pattern was specified." }
+        -3 { "Error: $folder → no files matched the patterns." }
+        -2 { "Error: $folder → no search patterns were specified." }
         -1 { "Error: $folder → no analysis directory was specified." }
          0 { "Success: $folder → all libraries found in the analysis directory." }
          1 { "Warning: $folder → one or more libraries were found in the system directory." }

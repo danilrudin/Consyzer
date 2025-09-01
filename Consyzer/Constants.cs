@@ -94,7 +94,7 @@ internal static class Constants
                 public static class Options
                 {
                     public const string AnalysisDirectory = nameof(AnalysisOptions.AnalysisDirectory);
-                    public const string SearchPattern = nameof(AnalysisOptions.SearchPattern);
+                    public const string SearchPatterns = nameof(AnalysisOptions.SearchPatterns);
                 }
 
                 public static class Assembly

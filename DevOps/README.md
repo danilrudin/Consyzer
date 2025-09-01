@@ -11,16 +11,17 @@ This is especially useful in **CI/CD pipelines**.
 .\Scripts\SolutionAnalyzer.ps1 `
   -pathToConsyzer "C:\Tools\Consyzer.exe" `
   -solutionForAnalysis "C:\Path\To\RepoRoot" `
-  -searchPattern "*.exe, *.dll" `
+  -searchPatterns "*.exe, *.dll" `
   -recursiveSearch $false `
   -outputFormat "Console" `
   -buildConfiguration "Release"
 ```
 
 Arguments:
+
 - `-pathToConsyzer` – Full path to the **Consyzer** executable.
 - `-solutionForAnalysis` – Path to the folder containing the built solution (e.g. the repository root).
-- `-searchPattern` – Comma-separated list of file patterns to scan. Default: `"*.exe, *.dll"`
+- `-searchPatterns` – Comma-separated list of file patterns to scan. Default: `"*.exe, *.dll"`
 - `-recursiveSearch` – Whether to search subdirectories for matching files. Default: `false`
 - `-outputFormat` – Output format(s) for reports. Supports multiple values separated by commas. Default: `"Console"`
 - `-buildConfiguration` – Build configuration folder to target. Default: `"Release"`
@@ -32,14 +33,14 @@ To use this in Azure Pipelines:
 ```yaml
 - task: PowerShell@2
   inputs:
-    targetType: 'filePath'
-    filePath: '$(Build.SourcesDirectory)/DevOps/Scripts/SolutionAnalyzer.ps1'
+    targetType: "filePath"
+    filePath: "$(Build.SourcesDirectory)/DevOps/Scripts/SolutionAnalyzer.ps1"
     arguments: >
       -pathToConsyzer "$(Build.BinariesDirectory)/Consyzer.exe"
       -solutionForAnalysis "$(Build.SourcesDirectory)"
-      -searchPattern "*.exe, *.dll"
+      -searchPatterns "*.exe, *.dll"
       -recursiveSearch $false
       -outputFormat "Console"
       -buildConfiguration "Release"
-  displayName: 'Run Consyzer on all solution outputs'
+  displayName: "Run Consyzer on all solution outputs"
 ```

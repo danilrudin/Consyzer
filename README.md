@@ -36,7 +36,7 @@ Consyzer was created to ensure that such situations do not come as a surprise.
 
 ## How it works
 
-1. Consyzer selects files for analysis based on the specified directory and search pattern;
+1. Consyzer selects files for analysis based on the specified directory and search patterns;
 2. Consyzer logs and excludes any files that are not ECMA-355 assemblies from the analysis;
 3. Consyzer analyzes the remaining ECMA assemblies for the presence of P/Invoke methods;
 4. Consyzer analyzes each found P/Invoke method and checks whether the corresponding native libraries exist in the system;
@@ -129,13 +129,13 @@ The following report formats are supported:
 
 ---
 
-| Code | Configuration or execution error                          |
-| ---- | --------------------------------------------------------- |
-| -1   | No analysis directory was specified                       |
-| -2   | No file search pattern was specified                      |
-| -3   | No files were found in the directory matching the pattern |
-| -4   | No valid files were found for analysis                    |
-| -5   | No P/Invoke methods were found in the assemblies          |
+| Code | Configuration or execution error                                  |
+| ---- | ----------------------------------------------------------------- |
+| -1   | No analysis directory was specified                               |
+| -2   | No file search patterns were specified                            |
+| -3   | No files were found in the directory matching the search patterns |
+| -4   | No valid files were found for analysis                            |
+| -5   | No P/Invoke methods were found in the assemblies                  |
 
 > Negative codes signal configuration errors or failures that occurred during the utility’s execution.  
 > The lower the code, the **further the utility progressed before the error occurred**.
@@ -145,7 +145,7 @@ The following report formats are supported:
 **Consyzer** is run from the command line (CLI) and requires two mandatory parameters:
 
 1. `--AnalysisDirectory` — specifies the directory containing CIL modules to analyze;
-2. `--SearchPattern` — specifies the search pattern for CIL modules to analyze.
+2. `--SearchPatterns` — specifies the search patterns for CIL modules to analyze.
 
 You can also specify two optional parameters:
 
@@ -155,13 +155,13 @@ You can also specify two optional parameters:
 ### General usage pattern
 
 ```
-Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPattern <search_pattern> [--RecursiveSearch true|false] [--OutputFormat Console, Json, Csv, Xml]
+Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--OutputFormat Console, Json, Csv, Xml]
 ```
 
 ### Example
 
 ```
-Consyzer.exe --AnalysisDirectory C:\Modules --SearchPattern "*.dll, *.exe" --RecursiveSearch true --OutputFormat Console, Json
+Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll, *.exe" --RecursiveSearch true --OutputFormat Console, Json
 ```
 
 ## Analyzing multiple projects in a solution

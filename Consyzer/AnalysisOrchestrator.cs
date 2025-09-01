@@ -28,7 +28,7 @@ internal sealed class AnalysisOrchestrator(
 
         if (!files.Any())
         {
-            logger.LogError("No files found by the given search pattern.");
+            logger.LogError("No files found matching the search patterns.");
             return (int)AppFailureCode.NoFilesFound;
         }
 
@@ -51,7 +51,7 @@ internal sealed class AnalysisOrchestrator(
 
         if (!pInvokeGroups.Any())
         {
-            logger.LogError("No P/Invoke methods were found in the assemblies.");
+            logger.LogError("No P/Invoke methods found in the assemblies.");
             return (int)AppFailureCode.NoPInvokeMethodsFound;
         }
 
