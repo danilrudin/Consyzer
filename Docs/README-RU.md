@@ -72,7 +72,7 @@ Consyzer был разработан для того, чтобы подобны�
         CreationDateUtc: 23.06.2025 10:45:00
         Sha256: FEDCBA0987654321FEDCBA0987654321FEDCBA0987654321FEDCBA0987654321
 [PInvokeMethodGroups]
-    [0] File: Foo.dll — Found: 2
+    [0] File: Foo.dll, Found: 2
         [0]
             Signature: 'Int32 static Native.Foo.DoStuff()'
             ImportName: 'existentlib.dll'
@@ -81,7 +81,7 @@ Consyzer был разработан для того, чтобы подобны�
             Signature: 'Void static Native.Foo.FailStuff(String)'
             ImportName: 'missinglib.dll'
             ImportFlags: 'CallingConventionStdCall'
-    [1] File: Baz.dll — Found: 1
+    [1] File: Baz.dll, Found: 1
         [0]
             Signature: 'Boolean static .Baz.CheckSomething(Int32)'
             ImportName: 'anotherlib.dll'
