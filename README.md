@@ -32,8 +32,6 @@ public static partial void HelloWorld();
 The application functions correctly without compromising system integrity and security as long as all unmanaged libraries are present at the locations described in the metadata;
 however, if even one of the libraries is missing, the application will not only crash but may also pose a security risk.
 
-> ⚠️ The analysis is based on the metadata stored in CIL assemblies and does not evaluate the correctness of marshaling between managed and unmanaged code.
-
 Consyzer was created to ensure that such situations do not come as a surprise.
 
 ## How it works
@@ -44,6 +42,8 @@ Consyzer was created to ensure that such situations do not come as a surprise.
 4. Consyzer analyzes each found P/Invoke method and checks whether the corresponding native libraries exist in the system;
 5. Consyzer generates a report based on the analysis results in one or more formats depending on the configuration;
 6. Consyzer returns an exit code indicating the specific analysis result, which also enables you to handle analysis incidents in accordance with your requirements.
+
+> ⚠️ The analysis is based on the metadata stored in CIL assemblies and does not evaluate the correctness of marshaling between managed and unmanaged code.
 
 ## Analysis Results
 
