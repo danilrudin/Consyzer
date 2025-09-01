@@ -1,6 +1,6 @@
 [![Build Status](https://github.com/danilrudin/Consyzer/workflows/Build/badge.svg)](https://github.com/danilrudin/Consyzer/actions/workflows/build.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=coverage)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![GitHub license](https://img.shields.io/github/license/danilrudin/Consyzer)](https://github.com/danilrudin/Consyzer/blob/master/LICENSE)
 
-This README is available in other languages:
+This README is also available in the following languages:
 
 - [Русский](./Docs/README-RU.md)
 
@@ -17,13 +17,16 @@ instead, the module's metadata stores information about the function being calle
 
 ```csharp
 // In this example, "foo.dll" is a reference to an unmanaged library containing the implementation of the HelloWorld function:
+
+// Classic P/Invoke
 [DllImport("foo.dll")]
-static extern void HelloWorld();
+public static extern void HelloWorld();
 
 // or
 
+// Source-generated P/Invoke (.NET 7+)
 [LibraryImport("foo.dll")]
-static partial void HelloWorld();
+public static partial void HelloWorld();
 ```
 
 The application functions correctly without compromising system integrity and security as long as all unmanaged libraries are present at the locations described in the metadata;
