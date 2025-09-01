@@ -20,7 +20,7 @@ using static Consyzer.Constants.Search;
 
 var configuration = new ConfigurationBuilder()
     .AddCommandLine(args)
-    .SetBasePath(Directory.GetCurrentDirectory())
+    .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false)
     .Build();
 
