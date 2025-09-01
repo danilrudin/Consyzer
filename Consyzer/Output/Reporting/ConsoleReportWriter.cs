@@ -50,7 +50,7 @@ internal sealed class ConsoleReportWriter(
             .PushIndent()
             .IndexedSection(groups, (b, g) =>
             {
-                b.Line($"{Label.PInvoke.File}: {g.File.Name} — Found: {g.Methods.Count()}");
+                b.Line($"{Label.PInvoke.File}: {g.File.Name}, Found: {g.Methods.Count()}");
                 b.IndexedSection(g.Methods, (bb, m) =>
                 {
                     bb.Line($"{Label.PInvoke.Signature}: '{m.Signature}'");
