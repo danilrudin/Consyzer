@@ -38,7 +38,7 @@ Consyzer was created to ensure that such situations do not come as a surprise.
 
 1. Consyzer selects files for analysis based on the specified directory and search pattern;
 2. Consyzer logs and excludes any files that are not ECMA-355 assemblies from the analysis;
-3. Consyzer analyzes the remaining ECMA assemblies for the presence of P/Invoke calls;
+3. Consyzer analyzes the remaining ECMA assemblies for the presence of P/Invoke methods;
 4. Consyzer analyzes each found P/Invoke method and checks whether the corresponding native libraries exist in the system;
 5. Consyzer generates a report based on the analysis results in one or more formats depending on the configuration;
 6. Consyzer returns an exit code indicating the specific analysis result, which also enables you to handle analysis incidents in accordance with your requirements.
@@ -129,12 +129,13 @@ The following report formats are supported:
 
 ---
 
-| Code | Configuration or execution error                     |
-| ---- | ---------------------------------------------------- |
-| -1   | Analysis directory not specified                     |
-| -2   | File search pattern not specified                    |
-| -3   | No files found in the directory matching the pattern |
-| -4   | None of the found files were valid for analysis      |
+| Code | Configuration or execution error                          |
+| ---- | --------------------------------------------------------- |
+| -1   | No analysis directory was specified                       |
+| -2   | No file search pattern was specified                      |
+| -3   | No files were found in the directory matching the pattern |
+| -4   | No valid files were found for analysis                    |
+| -5   | No P/Invoke methods were found in the assemblies          |
 
 > Negative codes signal configuration errors or failures that occurred during the utility’s execution.  
 > The lower the code, the **further the utility progressed before the error occurred**.

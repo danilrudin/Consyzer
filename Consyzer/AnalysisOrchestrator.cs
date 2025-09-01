@@ -49,6 +49,12 @@ internal sealed class AnalysisOrchestrator(
         logger.LogInformation("Analyzing P/Invoke methods...");
         var pInvokeGroups = pinvokeAnalyzer.Analyze(fileClassification.EcmaAssemblies);
 
+        if (!pInvokeGroups.Any())
+        {
+            logger.LogError("No P/Invoke methods were found in the assemblies.");
+            return (int)AppFailureCode.NoPInvokeMethodsFound;
+        }
+
         logger.LogInformation("Analyzing native library presence...");
         var libraryPresences = libraryPresenceAnalyzer.Analyze(pInvokeGroups);
 

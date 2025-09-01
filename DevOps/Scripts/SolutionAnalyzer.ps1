@@ -53,6 +53,7 @@ foreach ($folder in $analysisFolders) {
     }
 
     $message = switch ($LASTEXITCODE) {
+        -5 { "Error: $folder → no P/Invoke methods were found in the assemblies." }
         -4 { "Error: $folder → none of the files were valid for analysis." }
         -3 { "Error: $folder → no files matched the search pattern." }
         -2 { "Error: $folder → no search pattern was specified." }
