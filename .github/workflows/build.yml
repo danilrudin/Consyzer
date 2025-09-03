@@ -5,6 +5,7 @@ on:
       - master
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
   build:
     name: Build
@@ -35,15 +36,33 @@ jobs:
           key: ${{ runner.os }}-sonar-scanner
           restore-keys: ${{ runner.os }}-sonar-scanner
 
+      - name: Install SonarQube scanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          New-Item -Path .\.sonar\scanner -ItemType Directory
+          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+
+      - name: Start Analyze
+        shell: powershell
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: .\.sonar\scanner\dotnet-sonarscanner begin /k:"danilrudin_Consyzer" /o:"danilrudin" /d:sonar.token=$env:SONAR_TOKEN /d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
+
       - name: Build
         run: dotnet build --configuration Release
 
       - name: Unit Tests Executing
         run: dotnet test --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
+      - name: End Analyze
+        shell: powershell
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token=$env:SONAR_TOKEN
+
       - name: Publish
-        run: |
-          dotnet publish Consyzer/Consyzer.csproj -c Release -o _publish/Consyzer
+        run: dotnet publish Consyzer/Consyzer.csproj -c Release -o _publish/Consyzer
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
