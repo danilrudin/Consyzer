@@ -6,8 +6,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Consyzer;
-using Consyzer.Helpers;
 using Consyzer.Options;
+using Consyzer.Helpers;
 using Consyzer.Analyzers;
 using Consyzer.Core.Models;
 using Consyzer.Core.Classifiers;
@@ -62,7 +62,7 @@ var serviceProvider = new ServiceCollection()
     .AddScoped<IAnalyzer<IEnumerable<LibraryPresence>, LibraryLocationKind>, LibraryPresenceStatusAnalyzer>()
 
     // Reporting
-    .AddReportWriters(rawOptions.OutputFormats)
+    .AddReportWriters(rawOptions.ReportFormats)
 
     // Orchestrator
     .AddScoped<AnalysisOrchestrator>()

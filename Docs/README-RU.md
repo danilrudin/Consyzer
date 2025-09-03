@@ -147,18 +147,18 @@ Consyzer был разработан для того, чтобы подобны�
 Вы также можете указать два дополнительных параметра:
 
 1. `--RecursiveSearch` — указывает, выполнять ли поиск CIL-модулей во вложенных директориях. По умолчанию: `false`.
-2. `--OutputFormats` — задает форматы вывода отчёта (`Console`, `Json`, `Csv`, `Xml`) в виде списка, разделенного запятыми. По умолчанию: `Console`.
+2. `--ReportFormats` — задает форматы вывода отчёта (`Console`, `Json`, `Csv`, `Xml`) в виде списка, разделенного запятыми. По умолчанию: `Console`.
 
 ### Общий шаблон запуска
 
 ```
-Consyzer.exe --AnalysisDirectory <путь_к_директории> --SearchPatterns <шаблоны_поиска> [--RecursiveSearch true|false] [--OutputFormats Console, Json, Csv, Xml]
+Consyzer.exe --AnalysisDirectory <путь_к_директории> --SearchPatterns <шаблоны_поиска> [--RecursiveSearch true|false] [--ReportFormats Console, Json, Csv, Xml]
 ```
 
 ### Пример
 
 ```
-Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll, *.exe" --RecursiveSearch true --OutputFormats Console, Json
+Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll, *.exe" --RecursiveSearch true --ReportFormats Console, Json
 ```
 
 ## Анализ нескольких проектов в решении

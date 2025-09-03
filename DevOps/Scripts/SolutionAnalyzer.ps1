@@ -14,7 +14,7 @@ param(
 	[string]$buildConfiguration = "Release",
 
 	[Parameter(HelpMessage = "Report output formats. Default is 'Console'.")]
-	[string]$outputFormats = "Console",
+	[string]$reportFormats = "Console",
 
 	[Parameter(HelpMessage = "Recursive search for CIL modules. Default is false.")]
 	[bool]$recursiveSearch = $false
@@ -48,7 +48,7 @@ foreach ($folder in $analysisFolders) {
         --AnalysisDirectory $folder `
         --SearchPatterns $searchPatterns `
         --RecursiveSearch $recursiveSearch `
-        --OutputFormats $outputFormats
+        --ReportFormats $reportFormats
 
     if ($LASTEXITCODE -gt $finalExitCode) {
         $finalExitCode = $LASTEXITCODE
