@@ -30,7 +30,7 @@ internal static class Constants
     {
         public static class Destination
         {
-            public static readonly string TargetDirectory = Path.Combine(Environment.CurrentDirectory, Directory);
+            public static readonly string TargetDirectory = Path.Combine(AppContext.BaseDirectory, Directory);
 
             public static string Json => $"{Prefix}{Identifier}{JsonExtension}";
             public static string Csv => $"{Prefix}{Identifier}{CsvExtension}";
