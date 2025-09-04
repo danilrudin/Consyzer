@@ -30,38 +30,38 @@ AnalysisSummary:
 
 ```powershell
 .\Scripts\SolutionAnalyzer.ps1 `
-  -pathToConsyzer "C:\Tools\Consyzer.exe" `
-  -solutionForAnalysis "C:\Path\To\RepoRoot" `
-  -searchPatterns "*.exe, *.dll" `
-  -recursiveSearch $false `
-  -reportFormats "Console" `
-  -buildConfiguration "Release"
+  -ConsyzerPath "C:\Tools\Consyzer.exe" `
+  -SolutionPath "C:\Path\To\RepoRoot" `
+  -BuildConfiguration "Release" `
+  -SearchPatterns "*.exe, *.dll" `
+  -RecursiveSearch $false `
+  -ReportFormats "Console"
 ```
 
 Arguments:
 
-- `-pathToConsyzer` – Full path to the **Consyzer** executable.
-- `-solutionForAnalysis` – Path to the folder containing the built solution (e.g. the repository root).
-- `-searchPatterns` – Comma-separated list of file patterns to scan. Default: `"*.exe, *.dll"`
-- `-recursiveSearch` – Whether to search subdirectories for matching files. Default: `false`
-- `-reportFormats` – Comma-separated list of report output formats. Default: `"Console"`
-- `-buildConfiguration` – Build configuration folder to target. Default: `"Release"`
+- `-ConsyzerPath` – Full path to the **Consyzer** executable
+- `-SolutionPath` – Path to the folder containing the built solution (e.g. the repository root)
+- `-BuildConfiguration` – Build configuration folder to target. Default: `"Release"`
+- `-SearchPatterns` – Comma-separated list of file patterns to scan. Default: `"*.exe, *.dll"`
+- `-RecursiveSearch` – Whether to search subdirectories for matching files. Default: `false`
+- `-ReportFormats` – Comma-separated list of report output formats. Default: `"Console"`
 
 ### Azure Pipelines
 
-To use this in Azure Pipelines:
+To use this in Azure Pipelines, add the following step **after building the solution**:
 
 ```yaml
 - task: PowerShell@2
   inputs:
     targetType: "filePath"
-    filePath: "$(Build.SourcesDirectory)/DevOps/Scripts/SolutionAnalyzer.ps1"
+    filePath: "C:/tools/Consyzer/Scripts/SolutionAnalyzer.ps1"
     arguments: >
-      -pathToConsyzer "$(Build.BinariesDirectory)/Consyzer.exe"
-      -solutionForAnalysis "$(Build.SourcesDirectory)"
-      -searchPatterns "*.exe, *.dll"
-      -recursiveSearch $false
-      -reportFormats "Console"
-      -buildConfiguration "Release"
+      -ConsyzerPath "C:/tools/Consyzer/Consyzer.exe"
+      -SolutionPath "$(Build.SourcesDirectory)"
+      -BuildConfiguration "Release"
+      -SearchPatterns "*.exe, *.dll"
+      -RecursiveSearch $false
+      -ReportFormats "Console"
   displayName: "Run Consyzer on all solution outputs"
 ```

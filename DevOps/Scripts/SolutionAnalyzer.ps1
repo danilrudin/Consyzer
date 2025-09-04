@@ -1,29 +1,29 @@
 param(
 	[Parameter(Mandatory = $true, HelpMessage = "Path to Consyzer executable.")]
 	[ValidateScript({ Test-Path $_ -PathType Leaf })]
-	[string]$pathToConsyzer,
+	[string]$ConsyzerPath,
 
 	[Parameter(Mandatory = $true, HelpMessage = "Path to the solution for analysis.")]
 	[ValidateScript({ Test-Path $_ -PathType Container })]
-	[string]$solutionForAnalysis,
-
-	[Parameter(HelpMessage = "File extensions to scan for. Default is '*.exe, *.dll'.")]
-	[string]$searchPatterns = "*.exe, *.dll",
+	[string]$SolutionPath,
 
 	[Parameter(HelpMessage = "Build configuration to use. Default is 'Release'.")]
-	[string]$buildConfiguration = "Release",
+	[string]$BuildConfiguration = "Release",
 
-	[Parameter(HelpMessage = "Report output formats. Default is 'Console'.")]
-	[string]$reportFormats = "Console",
+	[Parameter(HelpMessage = "File extensions to scan for. Default is '*.exe, *.dll'.")]
+	[string]$SearchPatterns = "*.exe, *.dll",
 
 	[Parameter(HelpMessage = "Recursive search for CIL modules. Default is false.")]
-	[bool]$recursiveSearch = $false
+	[bool]$RecursiveSearch = $false,
+
+	[Parameter(HelpMessage = "Report output formats. Default is 'Console'.")]
+	[string]$ReportFormats = "Console"
 )
 
-Set-Location $solutionForAnalysis
+Set-Location $SolutionPath
 
 # Construct platform-independent regex to match bin/<Configuration> folders
-$regex = "bin[\\/]" + [Regex]::Escape($buildConfiguration) + "[\\/][^\\/]+$"
+$regex = "bin[\\/]" + [Regex]::Escape($BuildConfiguration) + "[\\/][^\\/]+$"
 
 $analysisFolders = Get-ChildItem -Path . -Recurse -Directory |
 	Where-Object { $_.FullName -match $regex } |
@@ -44,11 +44,11 @@ foreach ($folder in $analysisFolders) {
     Write-Output ("[{0}] Analyzing:`n`t{1}" -f $index, $folder)
     Write-Output ""
 
-    & $pathToConsyzer `
+    & $ConsyzerPath `
         --AnalysisDirectory $folder `
-        --SearchPatterns $searchPatterns `
-        --RecursiveSearch $recursiveSearch `
-        --ReportFormats $reportFormats
+        --SearchPatterns $SearchPatterns `
+        --RecursiveSearch $RecursiveSearch `
+        --ReportFormats $ReportFormats
 
     if ($LASTEXITCODE -gt $finalExitCode) {
         $finalExitCode = $LASTEXITCODE
