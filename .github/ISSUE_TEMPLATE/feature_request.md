@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Create a feature suggestion
+about: Create a feature request
 title: "[Feature]: "
 labels: enhancement
 ---
