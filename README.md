@@ -34,6 +34,12 @@ however, if even one of the libraries is missing, the application will not only 
 
 Consyzer was created to ensure that such situations do not come as a surprise.
 
+### Supported Platforms
+
+At this time, Consyzer supports checking the presence of native libraries on the following platforms:
+
+- Windows
+
 ## How it works
 
 1. Consyzer selects files for analysis based on the specified directory and search patterns;

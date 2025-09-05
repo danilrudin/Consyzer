@@ -1,11 +1,11 @@
 ﻿using Consyzer.Core.Models;
 using static Consyzer.Constants.LibrarySpace;
 
-namespace Consyzer.Core.Resolvers;
+namespace Consyzer.Core.Resolvers.Platform;
 
-internal sealed class CrossPlatformLibraryPresenceResolver(
+internal sealed class WindowsLibraryPresenceResolver(
     string analyzedDirectory
-) : ILibraryPresenceResolver
+) : IPlatformLibraryPresenceResolver
 {
     private readonly Func<string, LibraryPresence?>[] _resolvers =
     [
@@ -18,15 +18,14 @@ internal sealed class CrossPlatformLibraryPresenceResolver(
 
     public LibraryPresence Resolve(string file)
     {
-        foreach (var candidateName in ResolveLibraryName(file))
+        var candidateName = ResolveLibraryName(file);
+
+        foreach (var resolver in _resolvers)
         {
-            foreach (var resolver in _resolvers)
+            var presence = resolver(candidateName);
+            if (presence is not null)
             {
-                var presence = resolver(candidateName);
-                if (presence is not null)
-                {
-                    return presence;
-                }
+                return presence;
             }
         }
 
@@ -36,23 +35,6 @@ internal sealed class CrossPlatformLibraryPresenceResolver(
             ResolvedPath = null,
             LocationKind = LibraryLocationKind.Missing
         };
-    }
-
-    private static IEnumerable<string> ResolveLibraryName(string file)
-    {
-        if (Path.HasExtension(file))
-        {
-            yield return file;
-            yield break;
-        }
-
-        if (OperatingSystem.IsWindows())
-            yield return file + Extension.WindowsExtension;
-        else if (OperatingSystem.IsLinux())
-            yield return file + Extension.LinuxExtension;
-        else if (OperatingSystem.IsMacOS())
-            yield return file + Extension.MacExtension;
-        else yield return file;
     }
 
     private static LibraryPresence? ResolveAnalyzedDirectory(string analyzedDirectory, string file)
@@ -83,8 +65,7 @@ internal sealed class CrossPlatformLibraryPresenceResolver(
 
     private static LibraryPresence? ResolveInEnvironmentPath(string file)
     {
-        if (Path.IsPathRooted(file) || Path.GetFileName(file) != file)
-            return null;
+        if (Path.IsPathRooted(file) || Path.GetFileName(file) != file) return null;
 
         var pathDirectories = (Environment.GetEnvironmentVariable(Variable.Path) ?? string.Empty)
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
@@ -138,6 +119,16 @@ internal sealed class CrossPlatformLibraryPresenceResolver(
         }
 
         return null;
+    }
+
+    private static string ResolveLibraryName(string file)
+    {
+        if (Path.HasExtension(file))
+        {
+            return file;
+        }
+
+        return file + Extension.WindowsExtension;
     }
 
     private static string? GetCandidatePath(string? baseDirectory, string file)
