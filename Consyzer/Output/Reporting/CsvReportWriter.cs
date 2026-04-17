@@ -8,10 +8,10 @@ using static Consyzer.Constants.Output;
 namespace Consyzer.Output.Reporting;
 
 internal sealed class CsvReportWriter(
-    IOptions<AppOptions> options
+    IOptions<AppSettingsOptions> options
 ) : IReportWriter
 {
-    private readonly AppOptions.OutputOptions.CsvOptions _options = options.Value.Output.Csv;
+    private readonly AppSettingsOptions.OutputOptions.CsvOptions _options = options.Value.Output.Csv;
 
     public string Write(AnalysisOutcome outcome)
     {
@@ -23,7 +23,7 @@ internal sealed class CsvReportWriter(
 
         WriteAssemblyMetadata(builder, outcome.AssemblyMetadataList);
         WritePInvokeGroups(builder, outcome.PInvokeMethodGroups);
-        WriteLibraryPresences(builder, outcome.LibraryPresences);
+        WriteLibraryResolutionResults(builder, outcome.LibraryResolutions);
         WriteSummary(builder, outcome.Summary);
 
         File.WriteAllText(fullPath, builder.Build(), encoding);
@@ -34,7 +34,26 @@ internal sealed class CsvReportWriter(
     private void WriteAssemblyMetadata(CsvTableBuilder builder, IEnumerable<AssemblyMetadata> metadataList)
     {
         builder.Record([Structure.Section.Bracketed.AssemblyMetadataList]);
-        builder.Records(metadataList, SerializeValue);
+
+        builder.Header(
+        [
+            Structure.Label.Assembly.File,
+            Structure.Label.Assembly.Version,
+            Structure.Label.Assembly.CreationDateUtc,
+            Structure.Label.Assembly.Sha256
+        ]);
+
+        foreach (var metadata in metadataList)
+        {
+            builder.Record(
+            [
+                SerializeValue(metadata.File.Name),
+                SerializeValue(metadata.Version),
+                SerializeValue(metadata.CreationDateUtc.ToString("O")),
+                SerializeValue(metadata.Sha256)
+            ]);
+        }
+
         builder.Record([]);
     }
 
@@ -68,25 +87,72 @@ internal sealed class CsvReportWriter(
         builder.Record([]);
     }
 
-    private void WriteLibraryPresences(CsvTableBuilder builder, IEnumerable<LibraryPresence> presences)
+    private void WriteLibraryResolutionResults(
+        CsvTableBuilder builder,
+        IEnumerable<LibraryResolutionResult> libraryResolutions)
     {
-        builder.Record([Structure.Section.Bracketed.LibraryPresences]);
-        builder.Records(presences, SerializeValue);
+        builder.Record([Structure.Section.Bracketed.LibraryResolutionResults]);
+
+        builder.Header(
+        [
+            Structure.Label.Library.Name,
+            Structure.Label.Library.State,
+            Structure.Label.Library.ResolvedPath,
+            Structure.Label.Library.MechanismKind,
+            Structure.Label.Library.HeuristicCandidates,
+            Structure.Label.Library.NotSimulated
+        ]);
+
+        foreach (var libraryResolution in libraryResolutions)
+        {
+            builder.Record(
+            [
+                SerializeValue(libraryResolution.LibraryName),
+                SerializeValue(libraryResolution.State.ToString()),
+                SerializeValue(libraryResolution.Resolved?.Path),
+                SerializeValue(libraryResolution.Resolved?.MechanismKind.ToString()),
+                SerializeValue(libraryResolution.HeuristicCandidates),
+                SerializeValue(libraryResolution.NotSimulated.ToString())
+            ]);
+        }
+
         builder.Record([]);
     }
 
     private void WriteSummary(CsvTableBuilder builder, AnalysisSummary summary)
     {
         builder.Record([Structure.Section.Bracketed.Summary]);
-        builder.Records([summary], SerializeValue);
+
+        builder.Header(
+        [
+            Structure.Label.Summary.TotalFiles,
+            Structure.Label.Summary.EcmaAssemblies,
+            Structure.Label.Summary.AssembliesWithPInvoke,
+            Structure.Label.Summary.TotalPInvokeMethods,
+            Structure.Label.Summary.ResolvedLibraries,
+            Structure.Label.Summary.MissingLibraries,
+            Structure.Label.Summary.InconclusiveLibraries
+        ]);
+
+        builder.Record(
+        [
+            SerializeValue(summary.TotalFiles),
+            SerializeValue(summary.EcmaAssemblies),
+            SerializeValue(summary.AssembliesWithPInvoke),
+            SerializeValue(summary.TotalPInvokeMethods),
+            SerializeValue(summary.ResolvedLibraries),
+            SerializeValue(summary.MissingLibraries),
+            SerializeValue(summary.InconclusiveLibraries)
+        ]);
+
         builder.Record([]);
     }
 
     private string SerializeValue(object? value)
     {
-        if (value is IEnumerable<string> strList && value is not string)
+        if (value is IEnumerable<string> stringList && value is not string)
         {
-            return EscapeList(strList);
+            return EscapeList(stringList);
         }
 
         return EscapeValue(value?.ToString());
@@ -96,8 +162,13 @@ internal sealed class CsvReportWriter(
     {
         var delimiter = _options.Delimiter;
         var innerDelimiter = GetSafeInnerDelimiter(delimiter);
-        var safeItems = items.Select(i => (i ?? string.Empty).Replace(delimiter, ' '));
+
+        var safeItems = items
+            .Select(item => (item ?? string.Empty)
+            .Replace(delimiter, ' '));
+
         var joined = string.Join(innerDelimiter, safeItems);
+
         return EscapeValue(joined);
     }
 
@@ -112,7 +183,14 @@ internal sealed class CsvReportWriter(
 
     private static string EscapeValue(string? value)
     {
-        if (string.IsNullOrEmpty(value)) return "\"\"";
-        return $"\"{value.Replace("\"", "\"\"").Replace('\n', ' ').Replace('\r', ' ')}\"";
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        return $"\"{value
+            .Replace("\"", "\"\"")
+            .Replace('\n', ' ')
+            .Replace('\r', ' ')}\"";
     }
 }

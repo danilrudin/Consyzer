@@ -10,39 +10,41 @@ internal sealed class MethodSignatureExtractor(
     MetadataReader mdReader
 ) : IExtractor<MethodDefinition, MethodSignature>
 {
+    private static readonly StringSignatureTypeProvider SignatureTypeProvider = new();
+
     public MethodSignature Extract(MethodDefinition methodDef)
     {
+        var signature = DecodeSignature(methodDef);
+        var typeDef = GetDeclaringTypeDefinition(methodDef);
+
         return new MethodSignature
         {
-            ReturnType = GetReturnType(methodDef),
+            ReturnType = GetReturnType(signature),
             IsStatic = IsStatic(methodDef),
-            Namespace = GetNamespace(methodDef),
-            Class = GetClassName(methodDef),
+            Namespace = GetNamespace(typeDef),
+            Class = GetClassName(typeDef),
             Method = GetMethodName(methodDef),
-            MethodArguments = GetArguments(methodDef)
+            MethodArguments = GetArguments(signature)
         };
     }
 
-    private static string GetReturnType(MethodDefinition methodDef)
+    private static string GetReturnType(MethodSignature<string> signature)
     {
-        var signature = DecodeSignature(methodDef);
         return signature.ReturnType;
     }
 
-    public static bool IsStatic(MethodDefinition methodDef)
+    private static bool IsStatic(MethodDefinition methodDef)
     {
         return methodDef.Attributes.HasFlag(MethodAttributes.Static);
     }
 
-    private string GetNamespace(MethodDefinition methodDef)
+    private string GetNamespace(TypeDefinition typeDef)
     {
-        var typeDef = GetDeclaringTypeDefinition(methodDef);
         return mdReader.GetString(typeDef.Namespace);
     }
 
-    private string GetClassName(MethodDefinition methodDef)
+    private string GetClassName(TypeDefinition typeDef)
     {
-        var typeDef = GetDeclaringTypeDefinition(methodDef);
         return mdReader.GetString(typeDef.Name);
     }
 
@@ -51,20 +53,19 @@ internal sealed class MethodSignatureExtractor(
         return mdReader.GetString(methodDef.Name);
     }
 
-    private static ImmutableArray<string> GetArguments(MethodDefinition methodDef)
+    private static ImmutableArray<string> GetArguments(MethodSignature<string> signature)
     {
-        var signature = DecodeSignature(methodDef);
         return signature.ParameterTypes;
     }
 
     private TypeDefinition GetDeclaringTypeDefinition(MethodDefinition methodDef)
     {
-        return mdReader.GetTypeDefinition(methodDef.GetDeclaringType());
+        var decType = methodDef.GetDeclaringType();
+        return mdReader.GetTypeDefinition(decType);
     }
 
     private static MethodSignature<string> DecodeSignature(MethodDefinition methodDef)
     {
-        var signatureTypeProvider = new StringSignatureTypeProvider();
-        return methodDef.DecodeSignature(signatureTypeProvider, new object());
+        return methodDef.DecodeSignature(SignatureTypeProvider, new object());
     }
 }

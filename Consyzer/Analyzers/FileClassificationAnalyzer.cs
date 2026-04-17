@@ -9,6 +9,6 @@ internal sealed class FileClassificationAnalyzer(
 {
     public AnalysisFileClassification Analyze(IEnumerable<FileInfo> files)
     {
-        return fileClassifier.Check(files);
+        return fileClassifier.Classify(files);
     }
 }

@@ -1,18 +1,17 @@
 ﻿using Xunit;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 using static Consyzer.Tests.TestInfrastructure.Constants;
 
 namespace Consyzer.Tests.Core.Resources;
 
-public sealed class PEReaderAccessorTests
+public sealed class MetadataOnlyPEReaderCacheTests
 {
     [Fact]
     public void Get_ShouldReturnPEReader_WhenCalledFirstTime()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var accessor = new PEReaderAccessor(streamAccessor);
+        using var accessor = new MetadataOnlyPEReaderCache();
 
-        var reader = accessor.Get(EcmaAssemblyWithPInvoke);
+        var reader = accessor.GetOrAdd(EcmaAssemblyWithPInvoke);
 
         Assert.NotNull(reader);
         Assert.True(reader.HasMetadata);
@@ -21,11 +20,10 @@ public sealed class PEReaderAccessorTests
     [Fact]
     public void Get_ShouldReturnCachedPEReader_WhenCalledMultipleTimesWithSameFile()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var accessor = new PEReaderAccessor(streamAccessor);
+        using var accessor = new MetadataOnlyPEReaderCache();
 
-        var reader1 = accessor.Get(EcmaAssemblyWithPInvoke);
-        var reader2 = accessor.Get(EcmaAssemblyWithPInvoke);
+        var reader1 = accessor.GetOrAdd(EcmaAssemblyWithPInvoke);
+        var reader2 = accessor.GetOrAdd(EcmaAssemblyWithPInvoke);
 
         Assert.Same(reader1, reader2);
     }
@@ -33,10 +31,9 @@ public sealed class PEReaderAccessorTests
     [Fact]
     public void Dispose_ShouldReleasePEReaders()
     {
-        var streamAccessor = new FileStreamAccessor();
-        var accessor = new PEReaderAccessor(streamAccessor);
+        var accessor = new MetadataOnlyPEReaderCache();
 
-        var reader = accessor.Get(EcmaAssemblyWithPInvoke);
+        var reader = accessor.GetOrAdd(EcmaAssemblyWithPInvoke);
 
         accessor.Dispose();
 

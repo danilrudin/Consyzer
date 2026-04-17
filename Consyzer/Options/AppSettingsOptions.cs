@@ -1,6 +1,6 @@
 ﻿namespace Consyzer.Options;
 
-internal sealed class AppOptions
+internal sealed class AppSettingsOptions
 {
     public required OutputOptions Output {  get; set; }
 

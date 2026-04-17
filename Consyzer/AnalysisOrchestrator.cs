@@ -11,67 +11,84 @@ namespace Consyzer;
 internal sealed class AnalysisOrchestrator(
     ILogger<AnalysisOrchestrator> logger,
     IAnalysisLogBuilder analysisLogBuilder,
-    IOptions<AnalysisOptions> analysisOptions,
+    IOptions<CommandLineOptions> analysisOptions,
     IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification> fileClassificationAnalyzer,
     IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>> metadataAnalyzer,
-    IAnalyzer<IEnumerable<FileInfo>, IEnumerable<PInvokeMethodGroup>> pinvokeAnalyzer,
-    IAnalyzer<IEnumerable<PInvokeMethodGroup>, IEnumerable<LibraryPresence>> libraryPresenceAnalyzer,
-    IAnalyzer<IEnumerable<LibraryPresence>, LibraryLocationKind> libraryStatusAnalyzer,
+    IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>> pInvokeAnalyzer,
+    IAnalyzer<IEnumerable<PInvokeMethodGroup>, IReadOnlyList<LibraryResolutionResult>> libraryResolutionAnalyzer,
+    IAnalyzer<IEnumerable<LibraryResolutionResult>, AnalysisExitCode> exitCodeAnalyzer,
     IEnumerable<IReportWriter> reportWriters
 )
 {
-    public int Run(IEnumerable<FileInfo> files)
+    public ExitStatus Run(IEnumerable<FileInfo> files)
     {
-        logger.LogDebug("{Message}", analysisLogBuilder.BuildAnalysisOptionsLog(analysisOptions.Value));
+        var fileList = files.ToList();
 
+        logger.LogDebug("{Message}", analysisLogBuilder.BuildAnalysisOptionsLog(analysisOptions.Value));
         logger.LogInformation("Analysis started.");
 
-        if (!files.Any())
+        if (fileList.Count == 0)
         {
-            logger.LogError("No files found matching the search patterns.");
-            return (int)AppFailureCode.NoFilesFound;
+            return new ExitStatus(
+                AnalysisExitCode.InvalidInput,
+                InvalidInputReason.NoFilesFound,
+                "No files found matching the search patterns."
+            );
         }
 
-        logger.LogDebug("{Message}", analysisLogBuilder.BuildFoundFilesLog(files));
+        logger.LogDebug("{Message}", analysisLogBuilder.BuildFoundFilesLog(fileList));
 
-        var fileClassification = fileClassificationAnalyzer.Analyze(files);
+        var fileClassification = fileClassificationAnalyzer.Analyze(fileList);
         logger.LogInformation("{Message}", analysisLogBuilder.BuildFileClassificationLog(fileClassification));
 
-        if (!fileClassification.EcmaAssemblies.Any())
+        var ecmaAssemblies = fileClassification.EcmaAssemblies.ToList();
+        if (ecmaAssemblies.Count == 0)
         {
             logger.LogError("No valid ECMA assemblies found.");
-            return (int)AppFailureCode.AllFilesInvalid;
+
+            return new ExitStatus(
+                AnalysisExitCode.InvalidInput,
+                InvalidInputReason.AllFilesInvalid,
+                "No valid ECMA assemblies found."
+            );
         }
 
         logger.LogInformation("Analyzing assembly metadata...");
-        var metadataList = metadataAnalyzer.Analyze(fileClassification.EcmaAssemblies);
+        var metadataList = metadataAnalyzer.Analyze(ecmaAssemblies).ToList();
 
         logger.LogInformation("Analyzing P/Invoke methods...");
-        var pInvokeGroups = pinvokeAnalyzer.Analyze(fileClassification.EcmaAssemblies);
+        var pInvokeGroups = pInvokeAnalyzer.Analyze(ecmaAssemblies).ToList();
 
-        if (!pInvokeGroups.Any())
+        if (pInvokeGroups.Count == 0)
         {
             logger.LogError("No P/Invoke methods found in the assemblies.");
-            return (int)AppFailureCode.NoPInvokeMethodsFound;
+
+            return new ExitStatus(
+                AnalysisExitCode.InvalidInput,
+                InvalidInputReason.NoPInvokeMethodsFound,
+                "No P/Invoke methods found in the assemblies."
+            );
         }
 
-        logger.LogInformation("Analyzing native library presence...");
-        var libraryPresences = libraryPresenceAnalyzer.Analyze(pInvokeGroups);
+        logger.LogInformation("Analyzing native library resolution...");
+        var libraryResolutions = libraryResolutionAnalyzer.Analyze(pInvokeGroups).ToList();
 
         var summary = new AnalysisSummary
         {
-            TotalFiles = files.Count(),
-            EcmaAssemblies = metadataList.Count(),
-            AssembliesWithPInvoke = pInvokeGroups.Count(),
-            TotalPInvokeMethods = pInvokeGroups.Sum(g => g.Methods.Count()),
-            MissingLibraries = libraryPresences.Count(l => l.LocationKind == LibraryLocationKind.Missing)
+            TotalFiles = fileList.Count,
+            EcmaAssemblies = metadataList.Count,
+            AssembliesWithPInvoke = pInvokeGroups.Count,
+            TotalPInvokeMethods = pInvokeGroups.Sum(g => g.Methods.Count),
+            ResolvedLibraries = libraryResolutions.Count(r => r.State == ResolutionState.Resolved),
+            MissingLibraries = libraryResolutions.Count(r => r.State == ResolutionState.Missing),
+            InconclusiveLibraries = libraryResolutions.Count(r => r.State == ResolutionState.Inconclusive)
         };
 
         var outcome = new AnalysisOutcome
         {
             AssemblyMetadataList = metadataList,
             PInvokeMethodGroups = pInvokeGroups,
-            LibraryPresences = libraryPresences,
+            LibraryResolutions = libraryResolutions,
             Summary = summary
         };
 
@@ -82,8 +99,10 @@ internal sealed class AnalysisOrchestrator(
             logger.LogInformation("Report written to {Destination}.", destination);
         }
 
-        logger.LogInformation("Analysis completed.");
+        var exitCode = exitCodeAnalyzer.Analyze(libraryResolutions);
 
-        return (int)libraryStatusAnalyzer.Analyze(libraryPresences);
+        logger.LogInformation("Analysis completed with exit code {ExitCode}.", exitCode);
+
+        return new ExitStatus(exitCode);
     }
 }

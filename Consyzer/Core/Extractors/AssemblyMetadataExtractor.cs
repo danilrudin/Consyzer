@@ -1,14 +1,14 @@
 ﻿using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using Consyzer.Core.Models;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 using Consyzer.Core.Cryptography;
 
 namespace Consyzer.Core.Extractors;
 
 internal sealed class AssemblyMetadataExtractor(
     IFileHasher hasher,
-    IResourceAccessor<FileInfo, PEReader> peReaderAccessor
+    IResourceCache<FileInfo, PEReader> peReaderCache
 ) : IExtractor<FileInfo, AssemblyMetadata>
 {
     public AssemblyMetadata Extract(FileInfo file)
@@ -24,10 +24,18 @@ internal sealed class AssemblyMetadataExtractor(
 
     private string GetVersion(FileInfo file)
     {
-        var peReader = peReaderAccessor.Get(file);
-
+        var peReader = peReaderCache.GetOrAdd(file);
         var mdReader = peReader.GetMetadataReader();
-        return mdReader.GetAssemblyDefinition().Version?.ToString() ?? "unknown";
+
+        if (!mdReader.IsAssembly)
+        {
+            return "unknown";
+        }
+
+        return mdReader
+            .GetAssemblyDefinition()
+            .Version
+            .ToString();
     }
 
     private string GetHash(FileInfo file)

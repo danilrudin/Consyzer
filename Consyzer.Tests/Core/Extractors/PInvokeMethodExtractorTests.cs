@@ -1,5 +1,5 @@
 ﻿using Xunit;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
 using static Consyzer.Tests.TestInfrastructure.Constants;
 
@@ -10,8 +10,7 @@ public sealed class PInvokeMethodExtractorTests
     [Fact]
     public void Extract_ShouldReturnMethods_WhenPInvokeMethodsPresent()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var peAccessor = new PEReaderAccessor(streamAccessor);
+        using var peAccessor = new MetadataOnlyPEReaderCache();
         var extractor = new PInvokeMethodExtractor(peAccessor);
 
         var methods = extractor.Extract(EcmaAssemblyWithPInvoke);
@@ -26,8 +25,7 @@ public sealed class PInvokeMethodExtractorTests
     [Fact]
     public void Extract_ShouldReturnEmpty_WhenNoPInvokeMethods()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var peAccessor = new PEReaderAccessor(streamAccessor);
+        using var peAccessor = new MetadataOnlyPEReaderCache();
         var extractor = new PInvokeMethodExtractor(peAccessor);
 
         var result = extractor.Extract(EcmaAssemblyWithoutPInvoke);

@@ -1,5 +1,5 @@
 ﻿using Xunit;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
 using Consyzer.Core.Cryptography;
 using static Consyzer.Tests.TestInfrastructure.Constants;
@@ -14,9 +14,8 @@ public sealed class AssemblyMetadataExtractorTests
     [Fact]
     public void Extract_ShouldReturnCorrectMetadata_WhenCalled()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var peAccessor = new PEReaderAccessor(streamAccessor);
-        using var hasher = new Sha256FileHasher(streamAccessor);
+        using var peAccessor = new MetadataOnlyPEReaderCache();
+        var hasher = new Sha256FileHasher();
 
         var extractor = new AssemblyMetadataExtractor(hasher, peAccessor);
 

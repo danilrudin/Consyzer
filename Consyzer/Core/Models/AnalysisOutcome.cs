@@ -2,8 +2,8 @@
 
 internal sealed class AnalysisOutcome
 {
-    public required IEnumerable<AssemblyMetadata> AssemblyMetadataList { get; init; }
-    public required IEnumerable<PInvokeMethodGroup> PInvokeMethodGroups { get; init; }
-    public required IEnumerable<LibraryPresence> LibraryPresences { get; init; }
+    public required IReadOnlyList<AssemblyMetadata> AssemblyMetadataList { get; init; }
+    public required IReadOnlyList<PInvokeMethodGroup> PInvokeMethodGroups { get; init; }
+    public required IReadOnlyList<LibraryResolutionResult> LibraryResolutions { get; init; }
     public required AnalysisSummary Summary { get; init; }
 }

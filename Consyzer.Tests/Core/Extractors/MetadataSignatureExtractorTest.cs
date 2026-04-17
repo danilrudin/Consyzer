@@ -1,7 +1,7 @@
 ﻿using Xunit;
 using System.Reflection;
 using System.Reflection.Metadata;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
 using static Consyzer.Tests.TestInfrastructure.Constants;
 
@@ -12,9 +12,8 @@ public sealed class MetadataSignatureExtractorTest
     [Fact]
     public void Extract_ShouldReturnSignature_WhenValidMethodProvided()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var peAccessor = new PEReaderAccessor(streamAccessor);
-        var mdReader = peAccessor.Get(EcmaAssemblyWithPInvoke).GetMetadataReader();
+        using var peAccessor = new MetadataOnlyPEReaderCache();
+        var mdReader = peAccessor.GetOrAdd(EcmaAssemblyWithPInvoke).GetMetadataReader();
 
         var methodDef = mdReader.MethodDefinitions
             .Select(mdReader.GetMethodDefinition)

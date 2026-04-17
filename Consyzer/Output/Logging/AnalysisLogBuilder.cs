@@ -7,12 +7,12 @@ using static Consyzer.Constants.Output.Structure;
 namespace Consyzer.Output.Logging;
 
 internal sealed class AnalysisLogBuilder(
-    IOptions<AppOptions> options
+    IOptions<AppSettingsOptions> options
 ) : IAnalysisLogBuilder
 {
-    private readonly AppOptions.OutputOptions.ConsoleOptions _options = options.Value.Output.Console;
+    private readonly AppSettingsOptions.OutputOptions.ConsoleOptions _options = options.Value.Output.Console;
 
-    public string BuildAnalysisOptionsLog(AnalysisOptions options) =>
+    public string BuildAnalysisOptionsLog(CommandLineOptions options) =>
         new IndentedTextBuilder(_options.IndentChars)
             .Title(Section.Bracketed.AnalysisOptions)
             .PushIndent()

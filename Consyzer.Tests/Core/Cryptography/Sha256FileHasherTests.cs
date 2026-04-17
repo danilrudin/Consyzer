@@ -1,8 +1,7 @@
 using Xunit;
-using Consyzer.Core.Resources;
+using System.Security.Cryptography;
 using Consyzer.Core.Cryptography;
 using static Consyzer.Tests.TestInfrastructure.Constants;
-using System.Security.Cryptography;
 
 namespace Consyzer.Tests.Core.Cryptography;
 
@@ -11,8 +10,7 @@ public sealed class Sha256FileHasherTests
     [Fact]
     public void CalculateHash_ShouldReturnCorrectByteLength_WhenConverted()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var hasher = new Sha256FileHasher(streamAccessor);
+        var hasher = new Sha256FileHasher();
 
         var hexHash = hasher.CalculateHash(EcmaAssemblyWithPInvoke);
         var byteHash = Convert.FromHexString(hexHash);
@@ -23,23 +21,11 @@ public sealed class Sha256FileHasherTests
     [Fact]
     public void CalculateHash_ShouldReturnDifferentHashes_WhenFilesAreDifferent()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var hasher = new Sha256FileHasher(streamAccessor);
+        var hasher = new Sha256FileHasher();
 
         var hash1 = hasher.CalculateHash(EcmaAssemblyWithPInvoke);
         var hash2 = hasher.CalculateHash(NonEcmaAssembly);
 
         Assert.NotEqual(hash1, hash2);
-    }
-
-    [Fact]
-    public void Dispose_ShouldPreventFurtherHashing()
-    {
-        using var streamAccessor = new FileStreamAccessor();
-        var hasher = new Sha256FileHasher(streamAccessor);
-
-        hasher.Dispose();
-
-        Assert.Throws<ObjectDisposedException>(() => hasher.CalculateHash(EcmaAssemblyWithPInvoke));
     }
 }

@@ -5,23 +5,30 @@ namespace Consyzer.Analyzers;
 
 internal sealed class PInvokeMethodAnalyzer(
     IExtractor<FileInfo, IEnumerable<PInvokeMethod>> pInvokeMethodExtractor
-) : IAnalyzer<IEnumerable<FileInfo>, IEnumerable<PInvokeMethodGroup>>
+) : IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>>
 {
-    public IEnumerable<PInvokeMethodGroup> Analyze(IEnumerable<FileInfo> files)
+    public IReadOnlyList<PInvokeMethodGroup> Analyze(IEnumerable<FileInfo> files)
     {
+        var groups = new List<PInvokeMethodGroup>();
+
         foreach (var file in files)
         {
-            var methods = pInvokeMethodExtractor.Extract(file);
-            if (!methods.Any())
+            var methods = pInvokeMethodExtractor
+                .Extract(file)
+                .ToList();
+
+            if (methods.Count == 0)
             {
                 continue;
             }
 
-            yield return new PInvokeMethodGroup
+            groups.Add(new PInvokeMethodGroup
             {
                 File = file,
                 Methods = methods
-            };
+            });
         }
+
+        return groups;
     }
 }

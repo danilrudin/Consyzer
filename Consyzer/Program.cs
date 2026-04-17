@@ -11,7 +11,7 @@ using Consyzer.Helpers;
 using Consyzer.Analyzers;
 using Consyzer.Core.Models;
 using Consyzer.Core.Classifiers;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
 using Consyzer.Core.Cryptography;
 using Consyzer.Output.Logging;
@@ -24,16 +24,15 @@ var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: false)
     .Build();
 
-var rawOptions = configuration.Get<AnalysisOptions>()!;
+var rawOptions = configuration.Get<CommandLineOptions>()!;
 
 var serviceProvider = new ServiceCollection()
     // Options
-    .Configure<AnalysisOptions>(configuration)
-    .Configure<AppOptions>(configuration)
+    .Configure<CommandLineOptions>(configuration)
+    .Configure<AppSettingsOptions>(configuration)
 
     // Resources
-    .AddSingleton<IResourceAccessor<FileInfo, Stream>, FileStreamAccessor>()
-    .AddSingleton<IResourceAccessor<FileInfo, PEReader>, PEReaderAccessor>()
+    .AddSingleton<IResourceCache<FileInfo, PEReader>, MetadataOnlyPEReaderCache>()
 
     // Cryptography
     .AddScoped<IFileHasher, Sha256FileHasher>()
@@ -52,14 +51,14 @@ var serviceProvider = new ServiceCollection()
     .AddScoped<IExtractor<FileInfo, AssemblyMetadata>, AssemblyMetadataExtractor>()
 
     // Classifiers
-    .AddScoped<IFileClassifier<AnalysisFileClassification>, AnalysisFileClassifier>()
+    .AddScoped<IFileClassifier<AnalysisFileClassification>, EcmaFileClassifier>()
 
     // Analyzers
     .AddScoped<IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification>, FileClassificationAnalyzer>()
     .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>>, AssemblyMetadataAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<PInvokeMethodGroup>>, PInvokeMethodAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<PInvokeMethodGroup>, IEnumerable<LibraryPresence>>, LibraryPresenceAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<LibraryPresence>, LibraryLocationKind>, LibraryPresenceStatusAnalyzer>()
+    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>>, PInvokeMethodAnalyzer>()
+    .AddScoped<IAnalyzer<IEnumerable<PInvokeMethodGroup>, IReadOnlyList<LibraryResolutionResult>>, LibraryResolutionAnalyzer>()
+    .AddScoped<IAnalyzer<IEnumerable<LibraryResolutionResult>, AnalysisExitCode>, AnalysisExitCodeAnalyzer>()
 
     // Reporting
     .AddReportWriters(rawOptions.ReportFormats)
@@ -69,19 +68,19 @@ var serviceProvider = new ServiceCollection()
 
     .BuildServiceProvider();
 
-var options = serviceProvider.GetRequiredService<IOptions<AnalysisOptions>>().Value;
+var options = serviceProvider.GetRequiredService<IOptions<CommandLineOptions>>().Value;
 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
 if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
 {
     logger.LogError("Required {Parameter} parameter is not specified.", nameof(options.AnalysisDirectory));
-    return (int)AppFailureCode.NoAnalysisDirectory;
+    return (int)InvalidInputReason.NoAnalysisDirectory;
 }
 
 if (string.IsNullOrWhiteSpace(options.SearchPatterns))
 {
     logger.LogError("Required {Parameter} parameter is not specified.", nameof(options.SearchPatterns));
-    return (int)AppFailureCode.NoSearchPatterns;
+    return (int)InvalidInputReason.NoSearchPatterns;
 }
 
 var orchestrator = serviceProvider.GetRequiredService<AnalysisOrchestrator>();
@@ -92,4 +91,6 @@ var files = FileSearchHelper.GetFilesBySeparatedPatterns(
     PatternSeparator,
     options.RecursiveSearch
 );
-return orchestrator.Run(files);
+
+var status = orchestrator.Run(files);
+return (int)status.Code;

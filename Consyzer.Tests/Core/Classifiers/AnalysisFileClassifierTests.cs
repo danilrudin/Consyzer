@@ -1,5 +1,5 @@
 ﻿using Xunit;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 using Consyzer.Core.Classifiers;
 using static Consyzer.Tests.TestInfrastructure.Constants;
 using static Consyzer.Tests.TestInfrastructure.Helpers.MatchesHelper;
@@ -11,9 +11,8 @@ public sealed class AnalysisFileClassifierTests
     [Fact]
     public void Resolve_ShouldClassifyFilesCorrectly_WhenGivenMixedInput()
     {
-        using var streamAccessor = new FileStreamAccessor();
-        using var peAccessor = new PEReaderAccessor(streamAccessor);
-        var resolver = new AnalysisFileClassifier(peAccessor);
+        using var peAccessor = new MetadataOnlyPEReaderCache();
+        var resolver = new EcmaFileClassifier(peAccessor);
 
         var files = new[]
         {
@@ -21,7 +20,7 @@ public sealed class AnalysisFileClassifierTests
             NonEcmaAssembly
         };
         
-        var result = resolver.Check(files);
+        var result = resolver.Classify(files);
 
         Assert.Single(result.EcmaAssemblies);
         Assert.Single(result.NonEcmaModules);

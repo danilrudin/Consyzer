@@ -11,10 +11,10 @@ using static Consyzer.Constants.Output;
 namespace Consyzer.Output.Reporting;
 
 internal sealed class JsonReportWriter(
-    IOptions<AppOptions> options
+    IOptions<AppSettingsOptions> options
 ) : IReportWriter
 {
-    private readonly AppOptions.OutputOptions.JsonOptions _options = options.Value.Output.Json;
+    private readonly AppSettingsOptions.OutputOptions.JsonOptions _options = options.Value.Output.Json;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -22,8 +22,10 @@ internal sealed class JsonReportWriter(
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = 
         { 
-            new JsonFileInfoConverter(), 
-            new JsonEnumConverter<LibraryLocationKind>(),
+            new JsonFileInfoConverter(),
+            new JsonEnumConverter<ResolutionState>(),
+            new JsonEnumConverter<MechanismKind>(),
+            new JsonEnumConverter<NotSimulatedMechanisms>(),
             new JsonEnumConverter<MethodImportAttributes>()
         }
     };

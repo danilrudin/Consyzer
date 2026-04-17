@@ -7,12 +7,12 @@ using static Consyzer.Constants.Output.Structure;
 namespace Consyzer.Output.Reporting;
 
 internal sealed class ConsoleReportWriter(
-    IOptions<AppOptions> options
+    IOptions<AppSettingsOptions> options
 ) : IReportWriter
 {
     private const string Destination = "Console";
 
-    private readonly AppOptions.OutputOptions.ConsoleOptions _options = options.Value.Output.Console;
+    private readonly AppSettingsOptions.OutputOptions.ConsoleOptions _options = options.Value.Output.Console;
 
     public string Write(AnalysisOutcome outcome)
     {
@@ -20,7 +20,7 @@ internal sealed class ConsoleReportWriter(
 
         WriteAssemblyMetadata(builder, outcome.AssemblyMetadataList);
         WritePInvokeGroups(builder, outcome.PInvokeMethodGroups);
-        WriteLibraryPresence(builder, outcome.LibraryPresences);
+        WriteLibraryResolutions(builder, outcome.LibraryResolutions);
         WriteSummary(builder, outcome.Summary);
 
         Console.Out.Write(builder.Build());
@@ -28,49 +28,76 @@ internal sealed class ConsoleReportWriter(
         return Destination;
     }
 
-    private static void WriteAssemblyMetadata(IndentedTextBuilder builder, IEnumerable<AssemblyMetadata> metadataList)
+    private static void WriteAssemblyMetadata(
+        IndentedTextBuilder builder,
+        IEnumerable<AssemblyMetadata> metadataList
+    )
     {
         builder
             .Title(Section.Bracketed.AssemblyMetadataList)
             .PushIndent()
-            .IndexedSection(metadataList, (b, m) =>
+            .IndexedSection(metadataList, (b, metadata) =>
             {
-                b.Line($"{Label.Assembly.File}: {m.File.Name}");
-                b.Line($"{Label.Assembly.Version}: {m.Version}");
-                b.Line($"{Label.Assembly.CreationDateUtc}: {m.CreationDateUtc}");
-                b.Line($"{Label.Assembly.Sha256}: {m.Sha256}");
+                b.Line(Label.Assembly.File, metadata.File.Name);
+                b.Line(Label.Assembly.Version, metadata.Version);
+                b.Line(Label.Assembly.CreationDateUtc, metadata.CreationDateUtc.ToString("O"));
+                b.Line(Label.Assembly.Sha256, metadata.Sha256);
             })
             .PopIndent();
     }
 
-    private static void WritePInvokeGroups(IndentedTextBuilder builder, IEnumerable<PInvokeMethodGroup> groups)
+    private static void WritePInvokeGroups(
+        IndentedTextBuilder builder,
+        IEnumerable<PInvokeMethodGroup> groups
+    )
     {
         builder
             .Title(Section.Bracketed.PInvokeMethodGroups)
             .PushIndent()
-            .IndexedSection(groups, (b, g) =>
+            .IndexedSection(groups, (b, group) =>
             {
-                b.Line($"{Label.PInvoke.File}: {g.File.Name}, Found: {g.Methods.Count()}");
-                b.IndexedSection(g.Methods, (bb, m) =>
+                b.Line(Label.PInvoke.File, $"{group.File.Name}, Found: {group.Methods.Count}");
+
+                b.IndexedSection(group.Methods, (bb, method) =>
                 {
-                    bb.Line($"{Label.PInvoke.Signature}: '{m.Signature}'");
-                    bb.Line($"{Label.PInvoke.ImportName}: '{m.ImportName}'");
-                    bb.Line($"{Label.PInvoke.ImportFlags}: '{m.ImportFlags}'");
+                    bb.Line(Label.PInvoke.Signature, $"'{method.Signature}'");
+                    bb.Line(Label.PInvoke.ImportName, $"'{method.ImportName}'");
+                    bb.Line(Label.PInvoke.ImportFlags, $"'{method.ImportFlags}'");
                 });
             })
             .PopIndent();
     }
 
-    private static void WriteLibraryPresence(IndentedTextBuilder builder, IEnumerable<LibraryPresence> presences)
+    private static void WriteLibraryResolutions(
+        IndentedTextBuilder builder,
+        IEnumerable<LibraryResolutionResult> libraryResolutions
+    )
     {
         builder
-            .Title(Section.Bracketed.LibraryPresences)
+            .Title(Section.Bracketed.LibraryResolutionResults)
             .PushIndent()
-            .IndexedSection(presences, (b, p) =>
+            .IndexedSection(libraryResolutions, (b, libraryResolution) =>
             {
-                b.Line(Label.Library.Name, p.LibraryName);
-                b.Line(Label.Library.ResolvedPath, p.ResolvedPath ?? "null");
-                b.Line(Label.Library.LocationKind, p.LocationKind);
+                b.Line(Label.Library.Name, libraryResolution.LibraryName);
+                b.Line(Label.Library.State, libraryResolution.State);
+
+                if (libraryResolution.Resolved is not null)
+                {
+                    b.Line(Label.Library.ResolvedPath, libraryResolution.Resolved.Path);
+                    b.Line(Label.Library.MechanismKind, libraryResolution.Resolved.MechanismKind);
+                }
+
+                b.Line(
+                    Label.Library.HeuristicCandidates,
+                    libraryResolution.HeuristicCandidates.Count == 0
+                        ? "[]"
+                        : string.Join(", ", libraryResolution.HeuristicCandidates));
+
+                b.Line(
+                    Label.Library.NotSimulated,
+                    libraryResolution.NotSimulated == NotSimulatedMechanisms.None
+                        ? "None"
+                        : libraryResolution.NotSimulated);
             })
             .PopIndent();
     }
@@ -84,7 +111,9 @@ internal sealed class ConsoleReportWriter(
             .Line(Label.Summary.EcmaAssemblies, summary.EcmaAssemblies)
             .Line(Label.Summary.AssembliesWithPInvoke, summary.AssembliesWithPInvoke)
             .Line(Label.Summary.TotalPInvokeMethods, summary.TotalPInvokeMethods)
+            .Line(Label.Summary.ResolvedLibraries, summary.ResolvedLibraries)
             .Line(Label.Summary.MissingLibraries, summary.MissingLibraries)
+            .Line(Label.Summary.InconclusiveLibraries, summary.InconclusiveLibraries)
             .PopIndent();
     }
 }

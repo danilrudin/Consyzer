@@ -2,10 +2,31 @@
 
 namespace Consyzer.Analyzers;
 
-internal sealed class LibraryPresenceStatusAnalyzer : IAnalyzer<IEnumerable<LibraryPresence>, LibraryLocationKind>
+internal sealed class AnalysisExitCodeAnalyzer
+    : IAnalyzer<IEnumerable<LibraryResolutionResult>, AnalysisExitCode>
 {
-    public LibraryLocationKind Analyze(IEnumerable<LibraryPresence> presences)
+    public AnalysisExitCode Analyze(IEnumerable<LibraryResolutionResult> results)
     {
-        return presences.Max(p => p.LocationKind);
+        var hasMissing = false;
+        var hasInconclusive = false;
+
+        foreach (var result in results)
+        {
+            switch (result.State)
+            {
+                case ResolutionState.Missing:
+                    hasMissing = true;
+                    break;
+
+                case ResolutionState.Inconclusive:
+                    hasInconclusive = true;
+                    break;
+            }
+        }
+
+        if (hasMissing) return AnalysisExitCode.Missing;
+        if (hasInconclusive) return AnalysisExitCode.Inconclusive;
+
+        return AnalysisExitCode.Success;
     }
 }

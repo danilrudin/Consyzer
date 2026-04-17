@@ -11,21 +11,6 @@ internal static class Constants
         public const char PatternSeparator = ',';
     }
 
-    public static class LibrarySpace
-    {
-        public static class Variable
-        {
-            public const string Path = "PATH";
-        }
-
-        public static class Extension
-        {
-            public const string WindowsExtension = ".dll";
-            public const string LinuxExtension = ".so";
-            public const string MacExtension = ".dylib";
-        }
-    }
-
     internal static class Output
     {
         public static class Destination
@@ -54,7 +39,7 @@ internal static class Constants
             {
                 public static class Name
                 {
-                    public const string AnalysisOptions = nameof(Options.AnalysisOptions);
+                    public const string AnalysisOptions = nameof(Options.CommandLineOptions);
                     public const string FilesFound = "FilesFound";
                     public const string FileClassification = nameof(AnalysisFileClassification);
                     public const string NotEcma = nameof(AnalysisFileClassification.NonEcmaModules);
@@ -62,7 +47,7 @@ internal static class Constants
                     public const string EcmaAssemblies = nameof(AnalysisFileClassification.EcmaAssemblies);
                     public const string AssemblyMetadataList = nameof(AnalysisOutcome.AssemblyMetadataList);
                     public const string PInvokeMethodGroups = nameof(AnalysisOutcome.PInvokeMethodGroups);
-                    public const string LibraryPresences = nameof(AnalysisOutcome.LibraryPresences);
+                    public const string LibraryResolutionResults = nameof(AnalysisOutcome.LibraryResolutions);
                     public const string Summary = nameof(AnalysisOutcome.Summary);
                 }
 
@@ -76,7 +61,7 @@ internal static class Constants
                     public const string EcmaAssemblies = $"[{Name.EcmaAssemblies}]";
                     public const string AssemblyMetadataList = $"[{Name.AssemblyMetadataList}]";
                     public const string PInvokeMethodGroups = $"[{Name.PInvokeMethodGroups}]";
-                    public const string LibraryPresences = $"[{Name.LibraryPresences}]";
+                    public const string LibraryResolutionResults = $"[{Name.LibraryResolutionResults}]";
                     public const string Summary = $"[{Name.Summary}]";
                 }
             }
@@ -87,14 +72,15 @@ internal static class Constants
                 public const string Group = nameof(Group);
                 public const string Method = nameof(Method);
                 public const string Library = nameof(Library);
+                public const string Candidate = nameof(Candidate);
             }
 
             public static class Label
             {
                 public static class Options
                 {
-                    public const string AnalysisDirectory = nameof(AnalysisOptions.AnalysisDirectory);
-                    public const string SearchPatterns = nameof(AnalysisOptions.SearchPatterns);
+                    public const string AnalysisDirectory = nameof(CommandLineOptions.AnalysisDirectory);
+                    public const string SearchPatterns = nameof(CommandLineOptions.SearchPatterns);
                 }
 
                 public static class Assembly
@@ -115,9 +101,12 @@ internal static class Constants
 
                 public static class Library
                 {
-                    public const string Name = nameof(LibraryPresence.LibraryName);
-                    public const string ResolvedPath = nameof(LibraryPresence.ResolvedPath);
-                    public const string LocationKind = nameof(LibraryPresence.LocationKind);
+                    public const string Name = nameof(LibraryResolutionResult.LibraryName);
+                    public const string State = nameof(LibraryResolutionResult.State);
+                    public const string ResolvedPath = nameof(ResolvedPresence.Path);
+                    public const string MechanismKind = nameof(ResolvedPresence.MechanismKind);
+                    public const string HeuristicCandidates = nameof(LibraryResolutionResult.HeuristicCandidates);
+                    public const string NotSimulated = nameof(LibraryResolutionResult.NotSimulated);
                 }
 
                 public static class Summary
@@ -126,7 +115,9 @@ internal static class Constants
                     public const string EcmaAssemblies = nameof(AnalysisSummary.EcmaAssemblies);
                     public const string AssembliesWithPInvoke = nameof(AnalysisSummary.AssembliesWithPInvoke);
                     public const string TotalPInvokeMethods = nameof(AnalysisSummary.TotalPInvokeMethods);
+                    public const string ResolvedLibraries = nameof(AnalysisSummary.ResolvedLibraries);
                     public const string MissingLibraries = nameof(AnalysisSummary.MissingLibraries);
+                    public const string InconclusiveLibraries = nameof(AnalysisSummary.InconclusiveLibraries);
                 }
             }
         }

@@ -2,37 +2,37 @@
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using Consyzer.Core.Models;
-using Consyzer.Core.Resources;
+using Consyzer.Core.Caching;
 
 namespace Consyzer.Core.Extractors;
 
 internal sealed class PInvokeMethodExtractor(
-    IResourceAccessor<FileInfo, PEReader> peReaderAccessor
+    IResourceCache<FileInfo, PEReader> peReaderCache
 ) : IExtractor<FileInfo, IEnumerable<PInvokeMethod>>
 {
     public IEnumerable<PInvokeMethod> Extract(FileInfo file)
     {
-        var peReader = peReaderAccessor.Get(file);
+        var peReader = peReaderCache.GetOrAdd(file);
         var mdReader = peReader.GetMetadataReader();
 
-        foreach (var method in GetPInvokeMethods(mdReader))
-        {
-            yield return method;
-        }
+        return GetPInvokeMethods(mdReader);
     }
 
-    private static List<PInvokeMethod> GetPInvokeMethods(MetadataReader mdReader)
+    private static List<PInvokeMethod> GetPInvokeMethods(
+        MetadataReader mdReader
+    )
     {
+        var signatureExtractor = new MethodSignatureExtractor(mdReader);
+
         var methods = new List<PInvokeMethod>();
 
         foreach (var handle in mdReader.MethodDefinitions)
         {
             var definition = mdReader.GetMethodDefinition(handle);
 
-            if (IsPInvokeMethod(definition))
-            {
-                methods.Add(ToPInvokeMethod(mdReader, definition));
-            }
+            if (!IsPInvokeMethod(definition)) continue;
+
+            methods.Add(ToPInvokeMethod(mdReader, definition, signatureExtractor));
         }
 
         return methods;
@@ -43,10 +43,12 @@ internal sealed class PInvokeMethodExtractor(
         return methodDef.Attributes.HasFlag(MethodAttributes.PinvokeImpl);
     }
 
-    private static PInvokeMethod ToPInvokeMethod(MetadataReader mdReader, MethodDefinition methodDef)
+    private static PInvokeMethod ToPInvokeMethod(
+        MetadataReader mdReader,
+        MethodDefinition methodDef,
+        MethodSignatureExtractor signatureExtractor
+    )
     {
-        var signatureExtractor = new MethodSignatureExtractor(mdReader);
-
         var import = methodDef.GetImport();
         var module = mdReader.GetModuleReference(import.Module);
 

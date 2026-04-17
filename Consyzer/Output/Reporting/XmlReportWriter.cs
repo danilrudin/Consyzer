@@ -8,12 +8,12 @@ using static Consyzer.Constants.Output;
 namespace Consyzer.Output.Reporting;
 
 internal sealed class XmlReportWriter(
-    IOptions<AppOptions> options
+    IOptions<AppSettingsOptions> options
 ) : IReportWriter
 {
     private const string ReportName = "ConsyzerReport";
 
-    private readonly AppOptions.OutputOptions.XmlOptions _options = options.Value.Output.Xml;
+    private readonly AppSettingsOptions.OutputOptions.XmlOptions _options = options.Value.Output.Xml;
 
     public string Write(AnalysisOutcome outcome)
     {
@@ -34,7 +34,7 @@ internal sealed class XmlReportWriter(
 
         WriteAssemblyMetadata(writer, outcome.AssemblyMetadataList);
         WritePInvokeGroups(writer, outcome.PInvokeMethodGroups);
-        WriteLibraryPresence(writer, outcome.LibraryPresences);
+        WriteLibraryResolutions(writer, outcome.LibraryResolutions);
         WriteSummary(writer, outcome.Summary);
 
         writer.WriteEndElement();
@@ -52,7 +52,10 @@ internal sealed class XmlReportWriter(
             writer.WriteStartElement(Structure.Element.Assembly);
             writer.WriteElementString(Structure.Label.Assembly.File, info.File.Name);
             writer.WriteElementString(Structure.Label.Assembly.Version, info.Version);
-            writer.WriteElementString(Structure.Label.Assembly.CreationDateUtc, info.CreationDateUtc.ToString());
+            writer.WriteElementString(
+                Structure.Label.Assembly.CreationDateUtc,
+                info.CreationDateUtc.ToString("O")
+            );
             writer.WriteElementString(Structure.Label.Assembly.Sha256, info.Sha256);
             writer.WriteEndElement();
         }
@@ -84,16 +87,44 @@ internal sealed class XmlReportWriter(
         writer.WriteEndElement();
     }
 
-    private static void WriteLibraryPresence(XmlWriter writer, IEnumerable<LibraryPresence> presences)
+    private static void WriteLibraryResolutions(
+        XmlWriter writer,
+        IEnumerable<LibraryResolutionResult> libraryResolutions
+    )
     {
-        writer.WriteStartElement(Structure.Section.Name.LibraryPresences);
+        writer.WriteStartElement(Structure.Section.Name.LibraryResolutionResults);
 
-        foreach (var presence in presences)
+        foreach (var libraryResolution in libraryResolutions)
         {
             writer.WriteStartElement(Structure.Element.Library);
-            writer.WriteElementString(Structure.Label.Library.Name, presence.LibraryName);
-            writer.WriteElementString(Structure.Label.Library.ResolvedPath, presence.ResolvedPath);
-            writer.WriteElementString(Structure.Label.Library.LocationKind, presence.LocationKind.ToString());
+
+            writer.WriteElementString(Structure.Label.Library.Name, libraryResolution.LibraryName);
+            writer.WriteElementString(Structure.Label.Library.State, libraryResolution.State.ToString());
+
+            if (libraryResolution.Resolved is not null)
+            {
+                writer.WriteElementString(Structure.Label.Library.ResolvedPath, libraryResolution.Resolved.Path);
+
+                writer.WriteElementString(
+                    Structure.Label.Library.MechanismKind,
+                    libraryResolution.Resolved.MechanismKind.ToString()
+                );
+            }
+
+            writer.WriteStartElement(Structure.Label.Library.HeuristicCandidates);
+
+            foreach (var heuristicCandidate in libraryResolution.HeuristicCandidates)
+            {
+                writer.WriteElementString(Structure.Element.Candidate, heuristicCandidate);
+            }
+
+            writer.WriteEndElement();
+
+            writer.WriteElementString(
+                Structure.Label.Library.NotSimulated,
+                libraryResolution.NotSimulated.ToString()
+            );
+
             writer.WriteEndElement();
         }
 
@@ -108,7 +139,9 @@ internal sealed class XmlReportWriter(
         writer.WriteElementString(Structure.Label.Summary.EcmaAssemblies, summary.EcmaAssemblies.ToString());
         writer.WriteElementString(Structure.Label.Summary.AssembliesWithPInvoke, summary.AssembliesWithPInvoke.ToString());
         writer.WriteElementString(Structure.Label.Summary.TotalPInvokeMethods, summary.TotalPInvokeMethods.ToString());
+        writer.WriteElementString(Structure.Label.Summary.ResolvedLibraries, summary.ResolvedLibraries.ToString());
         writer.WriteElementString(Structure.Label.Summary.MissingLibraries, summary.MissingLibraries.ToString());
+        writer.WriteElementString(Structure.Label.Summary.InconclusiveLibraries, summary.InconclusiveLibraries.ToString());
 
         writer.WriteEndElement();
     }

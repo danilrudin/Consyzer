@@ -17,7 +17,6 @@ internal class JsonFileInfoConverter : JsonConverter<FileInfo>
     }
 }
 
-
 internal sealed class JsonEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
