@@ -1,11 +1,25 @@
 ﻿namespace Consyzer.Core.Models;
 
-internal sealed record ExitStatus(
+internal readonly record struct ExitStatus(
     AnalysisExitCode Code,
-    InvalidInputReason? InvalidReason = null,
-    string? Message = null,
-    Exception? Exception = null
-);
+    InvalidInputReason? InvalidReason = null
+)
+{
+    public int ProcessExitCode =>
+        Code == AnalysisExitCode.InvalidInput && InvalidReason is not null
+            ? (int)InvalidReason.Value
+            : (int)Code;
+
+    public static ExitStatus Success() => new(AnalysisExitCode.Success);
+
+    public static ExitStatus Missing() => new(AnalysisExitCode.Missing);
+
+    public static ExitStatus Inconclusive() => new(AnalysisExitCode.Inconclusive);
+
+    public static ExitStatus InvalidInput(InvalidInputReason reason) => new(AnalysisExitCode.InvalidInput, reason);
+
+    public static ExitStatus ToolError() => new(AnalysisExitCode.ToolError);
+}
 
 internal enum AnalysisExitCode
 {

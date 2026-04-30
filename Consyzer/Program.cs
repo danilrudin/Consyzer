@@ -19,14 +19,15 @@ using Consyzer.DependencyInjection;
 using static Consyzer.Constants.Search;
 
 var configuration = new ConfigurationBuilder()
-    .AddCommandLine(args)
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false)
+    .AddCommandLine(args)
     .Build();
 
 var rawOptions = configuration.Get<CommandLineOptions>()!;
 
-var serviceProvider = new ServiceCollection()
+using var serviceProvider = new ServiceCollection()
+
     // Options
     .Configure<CommandLineOptions>(configuration)
     .Configure<AppSettingsOptions>(configuration)
@@ -62,35 +63,55 @@ var serviceProvider = new ServiceCollection()
 
     // Reporting
     .AddReportWriters(rawOptions.ReportFormats)
-
+    
     // Orchestrator
     .AddScoped<AnalysisOrchestrator>()
 
     .BuildServiceProvider();
 
-var options = serviceProvider.GetRequiredService<IOptions<CommandLineOptions>>().Value;
-var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+using var scope = serviceProvider.CreateScope();
+var services = scope.ServiceProvider;
+
+var options = services.GetRequiredService<IOptions<CommandLineOptions>>().Value;
+var logger = services.GetRequiredService<ILogger<Program>>();
 
 if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
 {
-    logger.LogError("Required {Parameter} parameter is not specified.", nameof(options.AnalysisDirectory));
+    logger.LogWarning(
+        "Required {Parameter} parameter is not specified.",
+        nameof(options.AnalysisDirectory)
+    );
+
     return (int)InvalidInputReason.NoAnalysisDirectory;
 }
 
 if (string.IsNullOrWhiteSpace(options.SearchPatterns))
 {
-    logger.LogError("Required {Parameter} parameter is not specified.", nameof(options.SearchPatterns));
+    logger.LogWarning(
+        "Required {Parameter} parameter is not specified.",
+        nameof(options.SearchPatterns)
+    );
+
     return (int)InvalidInputReason.NoSearchPatterns;
 }
 
-var orchestrator = serviceProvider.GetRequiredService<AnalysisOrchestrator>();
+try
+{
+    var orchestrator = services.GetRequiredService<AnalysisOrchestrator>();
 
-var files = FileSearchHelper.GetFilesBySeparatedPatterns(
-    options.AnalysisDirectory,
-    options.SearchPatterns,
-    PatternSeparator,
-    options.RecursiveSearch
-);
+    var files = FileSearchHelper.GetFilesBySeparatedPatterns(
+        options.AnalysisDirectory,
+        options.SearchPatterns,
+        PatternSeparator,
+        options.RecursiveSearch
+    );
 
-var status = orchestrator.Run(files);
-return (int)status.Code;
+    var status = orchestrator.Run(files);
+
+    return status.ProcessExitCode;
+}
+catch (Exception exception)
+{
+    logger.LogError(exception, "Unhandled error during analysis.");
+    return (int)AnalysisExitCode.ToolError;
+}

@@ -110,13 +110,7 @@ internal sealed class LinuxLibraryResolutionResolver(string analyzedDirectory)
     private string[] CollectHeuristicCandidates(string normalized)
     {
         string? a = GetCandidatePath(_analyzedDirectory, normalized);
-
-        string? b = null;
-        try
-        {
-            b = GetCandidatePath(Directory.GetCurrentDirectory(), normalized);
-        }
-        catch { }
+        string? b = GetCandidatePath(Directory.GetCurrentDirectory(), normalized);
 
         if (a is null && b is null) return [];
         if (a is null) return [b!];

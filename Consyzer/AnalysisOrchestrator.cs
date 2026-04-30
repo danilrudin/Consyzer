@@ -29,11 +29,8 @@ internal sealed class AnalysisOrchestrator(
 
         if (fileList.Count == 0)
         {
-            return new ExitStatus(
-                AnalysisExitCode.InvalidInput,
-                InvalidInputReason.NoFilesFound,
-                "No files found matching the search patterns."
-            );
+            logger.LogWarning("No files found matching the search patterns.");
+            return ExitStatus.InvalidInput(InvalidInputReason.NoFilesFound);
         }
 
         logger.LogDebug("{Message}", analysisLogBuilder.BuildFoundFilesLog(fileList));
@@ -44,13 +41,8 @@ internal sealed class AnalysisOrchestrator(
         var ecmaAssemblies = fileClassification.EcmaAssemblies.ToList();
         if (ecmaAssemblies.Count == 0)
         {
-            logger.LogError("No valid ECMA assemblies found.");
-
-            return new ExitStatus(
-                AnalysisExitCode.InvalidInput,
-                InvalidInputReason.AllFilesInvalid,
-                "No valid ECMA assemblies found."
-            );
+            logger.LogWarning("No valid ECMA assemblies found.");
+            return ExitStatus.InvalidInput(InvalidInputReason.AllFilesInvalid);
         }
 
         logger.LogInformation("Analyzing assembly metadata...");
@@ -61,13 +53,8 @@ internal sealed class AnalysisOrchestrator(
 
         if (pInvokeGroups.Count == 0)
         {
-            logger.LogError("No P/Invoke methods found in the assemblies.");
-
-            return new ExitStatus(
-                AnalysisExitCode.InvalidInput,
-                InvalidInputReason.NoPInvokeMethodsFound,
-                "No P/Invoke methods found in the assemblies."
-            );
+            logger.LogWarning("No P/Invoke methods found in the assemblies.");
+            return ExitStatus.InvalidInput(InvalidInputReason.NoPInvokeMethodsFound);
         }
 
         logger.LogInformation("Analyzing native library resolution...");
@@ -101,8 +88,30 @@ internal sealed class AnalysisOrchestrator(
 
         var exitCode = exitCodeAnalyzer.Analyze(libraryResolutions);
 
-        logger.LogInformation("Analysis completed with exit code {ExitCode}.", exitCode);
+        logger.Log(
+            GetExitCodeLogLevel(exitCode),
+            "Analysis completed with exit code {ExitCode}.",
+            exitCode
+        );
 
-        return new ExitStatus(exitCode);
+        return exitCode switch
+        {
+            AnalysisExitCode.Success => ExitStatus.Success(),
+            AnalysisExitCode.Missing => ExitStatus.Missing(),
+            AnalysisExitCode.Inconclusive => ExitStatus.Inconclusive(),
+            AnalysisExitCode.ToolError => ExitStatus.ToolError(),
+            _ => throw new InvalidOperationException($"Unsupported analysis exit code '{exitCode}'.")
+        };
     }
+
+    private static LogLevel GetExitCodeLogLevel(AnalysisExitCode exitCode) =>
+        exitCode switch
+        {
+            AnalysisExitCode.Success => LogLevel.Information,
+            AnalysisExitCode.Missing => LogLevel.Warning,
+            AnalysisExitCode.Inconclusive => LogLevel.Warning,
+            AnalysisExitCode.InvalidInput => LogLevel.Warning,
+            AnalysisExitCode.ToolError => LogLevel.Error,
+            _ => LogLevel.Information
+        };
 }
