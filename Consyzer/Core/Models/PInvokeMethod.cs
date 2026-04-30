@@ -4,8 +4,8 @@ namespace Consyzer.Core.Models;
 
 internal sealed class PInvokeMethodGroup
 {
-    public required FileInfo File { get; set; }
-    public required IReadOnlyList<PInvokeMethod> Methods { get; set; }
+    public required FileInfo File { get; init; }
+    public required IReadOnlyList<PInvokeMethod> Methods { get; init; }
 }
 
 internal sealed class PInvokeMethod
