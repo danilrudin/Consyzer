@@ -1,4 +1,5 @@
 ﻿using Consyzer.Core.Models;
+using Consyzer.Helpers;
 
 namespace Consyzer.Core.Resolvers.Platform;
 
@@ -22,6 +23,28 @@ internal abstract class PlatformLibraryResolutionResolverBase
         return null;
     }
 
+    protected static string? TryResolveInDirectories(
+        IReadOnlyList<string> fileNames,
+        IEnumerable<string?> directories
+    )
+    {
+        foreach (var dir in directories)
+        {
+            if (string.IsNullOrWhiteSpace(dir)) continue;
+
+            foreach (var fileName in fileNames)
+            {
+                var candidate = GetCandidatePath(dir, fileName);
+                if (candidate is not null)
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
     protected static string? GetCandidatePath(string? baseDirectory, string file)
     {
         var candidate = string.IsNullOrWhiteSpace(baseDirectory)
@@ -31,12 +54,37 @@ internal abstract class PlatformLibraryResolutionResolverBase
         return File.Exists(candidate) ? Path.GetFullPath(candidate) : null;
     }
 
+    protected static IReadOnlyList<string> CollectCandidatePaths(
+        IReadOnlyList<string> fileNames,
+        params string?[] directories
+    )
+    {
+        var candidates = new List<string>();
+        var seen = new HashSet<string>(PlatformStringComparisonHelper.FilePathComparer);
+
+        foreach (var dir in directories)
+        {
+            if (string.IsNullOrWhiteSpace(dir)) continue;
+
+            foreach (var fileName in fileNames)
+            {
+                var candidate = GetCandidatePath(dir, fileName);
+                if (candidate is not null && seen.Add(candidate))
+                {
+                    candidates.Add(candidate);
+                }
+            }
+        }
+
+        return candidates;
+    }
+
     protected static IEnumerable<string> SplitSearchPath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) yield break;
 
         var parts = path.Split(
-            Path.PathSeparator, 
+            Path.PathSeparator,
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
         );
 
@@ -64,24 +112,28 @@ internal abstract class PlatformLibraryResolutionResolverBase
     protected static LibraryResolutionResult CreateResolved(
         string requestedName,
         string path,
-        MechanismKind kind
+        MechanismKind kind,
+        IReadOnlyList<string>? heuristicCandidates = null
     )
         => new()
         {
             LibraryName = requestedName,
             State = ResolutionState.Resolved,
             Resolved = new ResolvedPresence(path, kind),
-            HeuristicCandidates = [],
+            HeuristicCandidates = heuristicCandidates ?? [],
             NotSimulated = NotSimulatedMechanisms.None
         };
 
-    protected static LibraryResolutionResult CreateMissing(string requestedName)
+    protected static LibraryResolutionResult CreateMissing(
+        string requestedName,
+        IReadOnlyList<string>? heuristicCandidates = null
+    )
         => new()
         {
             LibraryName = requestedName,
             State = ResolutionState.Missing,
             Resolved = null,
-            HeuristicCandidates = [],
+            HeuristicCandidates = heuristicCandidates ?? [],
             NotSimulated = NotSimulatedMechanisms.None
         };
 
@@ -99,8 +151,27 @@ internal abstract class PlatformLibraryResolutionResolverBase
             NotSimulated = notSimulated
         };
 
-    protected static bool IsExplicitPath(string path) 
-        => Path.IsPathRooted(path) 
+    protected static bool IsExplicitPath(string path)
+        => Path.IsPathRooted(path)
         || path.Contains(Path.DirectorySeparatorChar)
         || path.Contains(Path.AltDirectorySeparatorChar);
+
+    protected static IReadOnlyList<string> DistinctCandidates(
+        IEnumerable<string> candidates,
+        StringComparer comparer
+    )
+    {
+        var result = new List<string>();
+        var seen = new HashSet<string>(comparer);
+
+        foreach (var candidate in candidates)
+        {
+            if (seen.Add(candidate))
+            {
+                result.Add(candidate);
+            }
+        }
+
+        return result;
+    }
 }

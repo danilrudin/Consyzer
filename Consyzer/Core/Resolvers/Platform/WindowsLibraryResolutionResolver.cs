@@ -6,6 +6,10 @@ internal sealed class WindowsLibraryResolutionResolver(
     string analyzedDirectory
 ) : PlatformLibraryResolutionResolverBase
 {
+    private const string LibraryExtension = ".dll";
+    private const string ExecutableExtension = ".exe";
+    private const string EnvironmentVariablePath = "PATH";
+
     private readonly string _analyzedDirectory = Path.GetFullPath(analyzedDirectory);
 
     // Windows has a lot of mechanisms we can't simulate.
@@ -23,21 +27,22 @@ internal sealed class WindowsLibraryResolutionResolver(
 
     public override LibraryResolutionResult Resolve(string file)
     {
-        var normalized = NormalizeLibraryName(file);
+        var candidates = GetLibraryNameCandidates(file);
+        var heuristicCandidates = Array.Empty<string>();
 
-        // TO DO: make state-machine
+        if (TryResolveExplicit(file, candidates[0], heuristicCandidates, out var result)) return result;
+        if (TryResolveApplicationDirectory(file, candidates, heuristicCandidates, out result)) return result;
+        if (TryResolveDefaultSystemLocations(file, candidates, heuristicCandidates, out result)) return result;
+        if (TryResolveCurrentDirectory(file, candidates, heuristicCandidates, out result)) return result;
+        if (TryResolveEnvironmentPath(file, candidates, heuristicCandidates, out result)) return result;
 
-        if (TryResolveExplicit(file, normalized, out var result)) return result;
-        if (TryResolveApplicationDirectory(file, normalized, out result)) return result;
-        if (TryResolveDefaultSystemLocations(file, normalized, out result)) return result;
-        if (TryResolveEnvironmentPath(file, normalized, out result)) return result;
-
-        return CreateInconclusive(file, CollectHeuristicCandidates(normalized), NotSimulated);
+        return CreateInconclusive(file, heuristicCandidates, NotSimulated);
     }
 
     private static bool TryResolveExplicit(
-        string requestedName, 
-        string normalized, 
+        string requestedName,
+        string normalized,
+        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
@@ -48,58 +53,79 @@ internal sealed class WindowsLibraryResolutionResolver(
         }
 
         result = candidate is not null
-            ? CreateResolved(requestedName, candidate, MechanismKind.ExplicitPath)
-            : CreateMissing(requestedName);
+            ? CreateResolved(requestedName, candidate, MechanismKind.ExplicitPath, heuristicCandidates)
+            : CreateMissing(requestedName, heuristicCandidates);
 
         return true;
     }
 
     private bool TryResolveApplicationDirectory(
-        string requestedName, 
-        string normalized, 
+        string requestedName,
+        IReadOnlyList<string> candidates,
+        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
-        var candidate = GetCandidatePath(_analyzedDirectory, normalized);
+        var candidate = TryResolveInDirectories(candidates, [_analyzedDirectory]);
         if (candidate is null)
         {
             result = default!;
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.ApplicationDirectory);
+        result = CreateResolved(requestedName, candidate, MechanismKind.ApplicationDirectory, heuristicCandidates);
         return true;
     }
 
     private static bool TryResolveDefaultSystemLocations(
-        string requestedName, 
-        string normalized,
+        string requestedName,
+        IReadOnlyList<string> candidates,
+        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
         var sysDir = Environment.SystemDirectory;
         var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
 
-        var candidate = TryResolveInDirectories(normalized, [sysDir, winDir]);
+        var candidate = TryResolveInDirectories(candidates, [sysDir, winDir]);
         if (candidate is null)
         {
             result = default!;
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.DefaultSystemLocations);
+        result = CreateResolved(requestedName, candidate, MechanismKind.DefaultSystemLocations, heuristicCandidates);
+        return true;
+    }
+
+    private static bool TryResolveCurrentDirectory(
+        string requestedName,
+        IReadOnlyList<string> candidates,
+        IReadOnlyList<string> heuristicCandidates,
+        out LibraryResolutionResult result
+    )
+    {
+        var candidate = TryResolveInDirectories(candidates, [Directory.GetCurrentDirectory()]);
+        if (candidate is null)
+        {
+            result = default!;
+            return false;
+        }
+
+        result = CreateResolved(requestedName, candidate, MechanismKind.CurrentDirectory, heuristicCandidates);
         return true;
     }
 
     private static bool TryResolveEnvironmentPath(
-        string requestedName, 
-        string normalized, 
+        string requestedName,
+        IReadOnlyList<string> candidates,
+        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
         var candidate = TryResolveInDirectories(
-            normalized,
-            SplitSearchPath(Environment.GetEnvironmentVariable("PATH"))
+            candidates,
+            SplitSearchPath(Environment.GetEnvironmentVariable(EnvironmentVariablePath))
         );
 
         if (candidate is null)
@@ -108,19 +134,23 @@ internal sealed class WindowsLibraryResolutionResolver(
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.EnvironmentOverride);
+        result = CreateResolved(requestedName, candidate, MechanismKind.EnvironmentOverride, heuristicCandidates);
         return true;
     }
 
-    private static string NormalizeLibraryName(string name)
+    private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
     {
-        return Path.HasExtension(name) ? name : Path.ChangeExtension(name, ".dll");
-    }
+        if (IsExplicitPath(input))
+        {
+            return [input];
+        }
 
-    private static string[] CollectHeuristicCandidates(string normalized)
-    {
-        var cwd = Directory.GetCurrentDirectory();
-        var candidate = GetCandidatePath(cwd, normalized);
-        return candidate is null ? [] : [candidate];
+        if (input.EndsWith(LibraryExtension, StringComparison.OrdinalIgnoreCase)
+            || input.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            return [input];
+        }
+
+        return DistinctCandidates([input, input + LibraryExtension], StringComparer.OrdinalIgnoreCase);
     }
 }

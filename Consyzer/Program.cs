@@ -82,7 +82,7 @@ if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
         nameof(options.AnalysisDirectory)
     );
 
-    return (int)InvalidInputReason.NoAnalysisDirectory;
+    return ExitStatus.InvalidInput(InvalidInputReason.NoAnalysisDirectory).ProcessExitCode;
 }
 
 if (string.IsNullOrWhiteSpace(options.SearchPatterns))
@@ -92,7 +92,7 @@ if (string.IsNullOrWhiteSpace(options.SearchPatterns))
         nameof(options.SearchPatterns)
     );
 
-    return (int)InvalidInputReason.NoSearchPatterns;
+    return ExitStatus.InvalidInput(InvalidInputReason.NoSearchPatterns).ProcessExitCode;
 }
 
 try
@@ -113,5 +113,5 @@ try
 catch (Exception exception)
 {
     logger.LogError(exception, "Unhandled error during analysis.");
-    return (int)AnalysisExitCode.ToolError;
+    return ExitStatus.ToolError().ProcessExitCode;
 }

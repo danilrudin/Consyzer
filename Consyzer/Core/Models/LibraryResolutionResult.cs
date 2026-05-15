@@ -46,7 +46,8 @@ internal enum MechanismKind
     ApplicationDirectory = 1,
     DefaultSystemLocations = 2,
     EnvironmentOverride = 3,
-    PlatformSpecificMechanism = 4
+    PlatformSpecificMechanism = 4,
+    CurrentDirectory = 5
 }
 
 [Flags]
