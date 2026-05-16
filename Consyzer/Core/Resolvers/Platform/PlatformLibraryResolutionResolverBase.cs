@@ -1,5 +1,4 @@
 ﻿using Consyzer.Core.Models;
-using Consyzer.Helpers;
 
 namespace Consyzer.Core.Resolvers.Platform;
 
@@ -7,20 +6,16 @@ internal abstract class PlatformLibraryResolutionResolverBase
 {
     public abstract LibraryResolutionResult Resolve(string file);
 
-    protected static string? TryResolveInDirectories(string fileName, IEnumerable<string?> directories)
+    protected static bool TryGetExplicitPathCandidate(string path, out string? candidate)
     {
-        foreach (var dir in directories)
+        if (!IsExplicitPath(path))
         {
-            if (string.IsNullOrWhiteSpace(dir)) continue;
-
-            var candidate = GetCandidatePath(dir, fileName);
-            if (candidate is not null)
-            {
-                return candidate;
-            }
+            candidate = null;
+            return false;
         }
 
-        return null;
+        candidate = GetCandidatePath(null, path);
+        return true;
     }
 
     protected static string? TryResolveInDirectories(
@@ -28,55 +23,7 @@ internal abstract class PlatformLibraryResolutionResolverBase
         IEnumerable<string?> directories
     )
     {
-        foreach (var dir in directories)
-        {
-            if (string.IsNullOrWhiteSpace(dir)) continue;
-
-            foreach (var fileName in fileNames)
-            {
-                var candidate = GetCandidatePath(dir, fileName);
-                if (candidate is not null)
-                {
-                    return candidate;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    protected static string? GetCandidatePath(string? baseDirectory, string file)
-    {
-        var candidate = string.IsNullOrWhiteSpace(baseDirectory)
-            ? file
-            : Path.Combine(baseDirectory, file);
-
-        return File.Exists(candidate) ? Path.GetFullPath(candidate) : null;
-    }
-
-    protected static IReadOnlyList<string> CollectCandidatePaths(
-        IReadOnlyList<string> fileNames,
-        params string?[] directories
-    )
-    {
-        var candidates = new List<string>();
-        var seen = new HashSet<string>(PlatformStringComparisonHelper.FilePathComparer);
-
-        foreach (var dir in directories)
-        {
-            if (string.IsNullOrWhiteSpace(dir)) continue;
-
-            foreach (var fileName in fileNames)
-            {
-                var candidate = GetCandidatePath(dir, fileName);
-                if (candidate is not null && seen.Add(candidate))
-                {
-                    candidates.Add(candidate);
-                }
-            }
-        }
-
-        return candidates;
+        return EnumerateExistingCandidatePaths(fileNames, directories).FirstOrDefault();
     }
 
     protected static IEnumerable<string> SplitSearchPath(string? path)
@@ -95,18 +42,6 @@ internal abstract class PlatformLibraryResolutionResolverBase
 
             yield return p;
         }
-    }
-
-    protected static bool TryGetExplicitPathCandidate(string path, out string? candidate)
-    {
-        if (!IsExplicitPath(path))
-        {
-            candidate = null;
-            return false;
-        }
-
-        candidate = GetCandidatePath(null, path);
-        return true;
     }
 
     protected static LibraryResolutionResult CreateResolved(
@@ -150,6 +85,35 @@ internal abstract class PlatformLibraryResolutionResolverBase
             HeuristicCandidates = heuristicCandidates,
             NotSimulated = notSimulated
         };
+
+    protected static IEnumerable<string> EnumerateExistingCandidatePaths(
+        IEnumerable<string> fileNames,
+        IEnumerable<string?> directories
+    )
+    {
+        foreach (var dir in directories)
+        {
+            if (string.IsNullOrWhiteSpace(dir)) continue;
+
+            foreach (var fileName in fileNames)
+            {
+                var candidate = GetCandidatePath(dir, fileName);
+                if (candidate is not null)
+                {
+                    yield return candidate;
+                }
+            }
+        }
+    }
+
+    protected static string? GetCandidatePath(string? baseDirectory, string file)
+    {
+        var candidate = string.IsNullOrWhiteSpace(baseDirectory)
+            ? file
+            : Path.Combine(baseDirectory, file);
+
+        return File.Exists(candidate) ? Path.GetFullPath(candidate) : null;
+    }
 
     protected static bool IsExplicitPath(string path)
         => Path.IsPathRooted(path)

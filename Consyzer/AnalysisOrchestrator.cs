@@ -11,7 +11,6 @@ namespace Consyzer;
 internal sealed class AnalysisOrchestrator(
     ILogger<AnalysisOrchestrator> logger,
     IAnalysisLogBuilder analysisLogBuilder,
-    IOptions<CommandLineOptions> analysisOptions,
     IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification> fileClassificationAnalyzer,
     IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>> metadataAnalyzer,
     IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>> pInvokeAnalyzer,
@@ -20,23 +19,20 @@ internal sealed class AnalysisOrchestrator(
     IEnumerable<IReportWriter> reportWriters
 )
 {
-    public ExitStatus Run(IEnumerable<FileInfo> files)
+    public ExitStatus Run(IReadOnlyList<FileInfo> files)
     {
-        var fileList = files.ToList();
-
-        logger.LogDebug("{Message}", analysisLogBuilder.BuildAnalysisOptionsLog(analysisOptions.Value));
         logger.LogInformation("Analysis started.");
 
-        if (fileList.Count == 0)
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogWarning("No files found matching the search patterns.");
-            return ExitStatus.InvalidInput(InvalidInputReason.NoFilesFound);
+            logger.LogDebug("{Message}", analysisLogBuilder.BuildFoundFilesLog(files));
         }
 
-        logger.LogDebug("{Message}", analysisLogBuilder.BuildFoundFilesLog(fileList));
-
-        var fileClassification = fileClassificationAnalyzer.Analyze(fileList);
-        logger.LogInformation("{Message}", analysisLogBuilder.BuildFileClassificationLog(fileClassification));
+        var fileClassification = fileClassificationAnalyzer.Analyze(files);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("{Message}", analysisLogBuilder.BuildFileClassificationLog(fileClassification));
+        }
 
         var ecmaAssemblies = fileClassification.EcmaAssemblies.ToList();
         if (ecmaAssemblies.Count == 0)
@@ -62,7 +58,7 @@ internal sealed class AnalysisOrchestrator(
 
         var summary = new AnalysisSummary
         {
-            TotalFiles = fileList.Count,
+            TotalFiles = files.Count,
             EcmaAssemblies = metadataList.Count,
             AssembliesWithPInvoke = pInvokeGroups.Count,
             TotalPInvokeMethods = pInvokeGroups.Sum(g => g.Methods.Count),
@@ -81,9 +77,16 @@ internal sealed class AnalysisOrchestrator(
 
         foreach (var writer in reportWriters)
         {
-            logger.LogInformation("Generating report using {WriterType}...", writer.GetType().Name);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Generating report using {WriterType}...", writer.GetType().Name);
+            }
+
             var destination = writer.Write(outcome);
-            logger.LogInformation("Report written to {Destination}.", destination);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Report written to {Destination}.", destination);
+            }
         }
 
         var exitCode = exitCodeAnalyzer.Analyze(libraryResolutions);

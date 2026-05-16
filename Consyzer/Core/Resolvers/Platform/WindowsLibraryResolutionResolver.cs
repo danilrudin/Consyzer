@@ -39,6 +39,22 @@ internal sealed class WindowsLibraryResolutionResolver(
         return CreateInconclusive(file, heuristicCandidates, NotSimulated);
     }
 
+    private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
+    {
+        if (IsExplicitPath(input))
+        {
+            return [input];
+        }
+
+        if (input.EndsWith(LibraryExtension, StringComparison.OrdinalIgnoreCase)
+            || input.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            return [input];
+        }
+
+        return DistinctCandidates([input, input + LibraryExtension], StringComparer.OrdinalIgnoreCase);
+    }
+
     private static bool TryResolveExplicit(
         string requestedName,
         string normalized,
@@ -136,21 +152,5 @@ internal sealed class WindowsLibraryResolutionResolver(
 
         result = CreateResolved(requestedName, candidate, MechanismKind.EnvironmentOverride, heuristicCandidates);
         return true;
-    }
-
-    private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
-    {
-        if (IsExplicitPath(input))
-        {
-            return [input];
-        }
-
-        if (input.EndsWith(LibraryExtension, StringComparison.OrdinalIgnoreCase)
-            || input.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase))
-        {
-            return [input];
-        }
-
-        return DistinctCandidates([input, input + LibraryExtension], StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -1,4 +1,5 @@
-﻿using Consyzer.Core.Models;
+﻿using Consyzer.Helpers;
+using Consyzer.Core.Models;
 
 namespace Consyzer.Core.Resolvers.Platform;
 
@@ -26,7 +27,6 @@ internal sealed class LinuxLibraryResolutionResolver(
         "/usr/lib",
         "/lib64",
         "/usr/lib64",
-        "/usr/local/lib",
         "/lib/x86_64-linux-gnu",
         "/usr/lib/x86_64-linux-gnu",
         "/lib/aarch64-linux-gnu",
@@ -47,6 +47,41 @@ internal sealed class LinuxLibraryResolutionResolver(
         if (TryResolveDefaultSystemLocations(file, candidates, heuristicCandidates, out result)) return result;
 
         return CreateInconclusive(file, heuristicCandidates, NotSimulated);
+    }
+
+    private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
+    {
+        if (IsExplicitPath(input))
+        {
+            return [input];
+        }
+
+        if (EndsWithSharedObjectName(input))
+        {
+            var extensioned = input + LibraryExtension;
+            return DistinctCandidates(
+            [
+                input,
+                WithLibPrefix(input),
+                extensioned,
+                WithLibPrefix(extensioned)
+            ], StringComparer.Ordinal);
+        }
+
+        var canonical = input + LibraryExtension;
+
+        return DistinctCandidates(
+        [
+            canonical,
+            WithLibPrefix(canonical),
+            input,
+            WithLibPrefix(input)
+        ], StringComparer.Ordinal);
+    }
+
+    private List<string> CollectHeuristicCandidates(IReadOnlyList<string> candidates)
+    {
+        return CollectCandidatePaths(candidates, _analyzedDirectory, Directory.GetCurrentDirectory());
     }
 
     private static bool TryResolveExplicit(
@@ -109,44 +144,28 @@ internal sealed class LinuxLibraryResolutionResolver(
         return true;
     }
 
-    private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
-    {
-        if (IsExplicitPath(input))
-        {
-            return [input];
-        }
-
-        if (EndsWithSharedObjectName(input))
-        {
-            var extensioned = input + LibraryExtension;
-            return DistinctCandidates(
-            [
-                input,
-                WithLibPrefix(input),
-                extensioned,
-                WithLibPrefix(extensioned)
-            ], StringComparer.Ordinal);
-        }
-
-        var canonical = input + LibraryExtension;
-
-        return DistinctCandidates(
-        [
-            canonical,
-            WithLibPrefix(canonical),
-            input,
-            WithLibPrefix(input)
-        ], StringComparer.Ordinal);
-    }
-
     private static bool EndsWithSharedObjectName(string input)
         => input.EndsWith(LibraryExtension, StringComparison.Ordinal)
-        || input.Contains(LibraryExtension, StringComparison.Ordinal);
+        || input.Contains(LibraryExtension + ".", StringComparison.Ordinal);
 
     private static string WithLibPrefix(string input) => "lib" + input;
 
-    private IReadOnlyList<string> CollectHeuristicCandidates(IReadOnlyList<string> candidates)
+    private static List<string> CollectCandidatePaths(
+        IReadOnlyList<string> fileNames,
+        params string?[] directories
+    )
     {
-        return CollectCandidatePaths(candidates, _analyzedDirectory, Directory.GetCurrentDirectory());
+        var candidates = new List<string>();
+        var seen = new HashSet<string>(PlatformStringComparisonHelper.FilePathComparer);
+
+        foreach (var candidate in EnumerateExistingCandidatePaths(fileNames, directories))
+        {
+            if (seen.Add(candidate))
+            {
+                candidates.Add(candidate);
+            }
+        }
+
+        return candidates;
     }
 }

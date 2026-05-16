@@ -74,6 +74,7 @@ var services = scope.ServiceProvider;
 
 var options = services.GetRequiredService<IOptions<CommandLineOptions>>().Value;
 var logger = services.GetRequiredService<ILogger<Program>>();
+var analysisLogBuilder = services.GetRequiredService<IAnalysisLogBuilder>();
 
 if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
 {
@@ -95,6 +96,11 @@ if (string.IsNullOrWhiteSpace(options.SearchPatterns))
     return ExitStatus.InvalidInput(InvalidInputReason.NoSearchPatterns).ProcessExitCode;
 }
 
+if (logger.IsEnabled(LogLevel.Debug))
+{
+    logger.LogDebug("{Message}", analysisLogBuilder.BuildAnalysisOptionsLog(options));
+}
+
 try
 {
     var orchestrator = services.GetRequiredService<AnalysisOrchestrator>();
@@ -104,7 +110,13 @@ try
         options.SearchPatterns,
         PatternSeparator,
         options.RecursiveSearch
-    );
+    ).ToList();
+
+    if (files.Count == 0)
+    {
+        logger.LogWarning("No files found matching the search patterns.");
+        return ExitStatus.InvalidInput(InvalidInputReason.NoFilesFound).ProcessExitCode;
+    }
 
     var status = orchestrator.Run(files);
 
