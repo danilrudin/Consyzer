@@ -155,17 +155,8 @@ internal sealed class LinuxLibraryResolutionResolver(
         params string?[] directories
     )
     {
-        var candidates = new List<string>();
         var seen = new HashSet<string>(PlatformStringComparisonHelper.FilePathComparer);
 
-        foreach (var candidate in EnumerateExistingCandidatePaths(fileNames, directories))
-        {
-            if (seen.Add(candidate))
-            {
-                candidates.Add(candidate);
-            }
-        }
-
-        return candidates;
+        return [.. EnumerateExistingCandidatePaths(fileNames, directories).Where(seen.Add)];
     }
 }

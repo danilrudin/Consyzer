@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Consyzer.Options;
 using Consyzer.Analyzers;
 using Consyzer.Core.Models;
 using Consyzer.Output.Logging;
@@ -91,11 +89,15 @@ internal sealed class AnalysisOrchestrator(
 
         var exitCode = exitCodeAnalyzer.Analyze(libraryResolutions);
 
-        logger.Log(
-            GetExitCodeLogLevel(exitCode),
-            "Analysis completed with exit code {ExitCode}.",
-            exitCode
-        );
+        var logLevel = GetExitCodeLogLevel(exitCode);
+        if (logger.IsEnabled(logLevel))
+        {
+            logger.Log(
+                logLevel,
+                "Analysis completed with exit code {ExitCode}.",
+                exitCode
+            );
+        }
 
         return exitCode switch
         {

@@ -103,8 +103,6 @@ if (logger.IsEnabled(LogLevel.Debug))
 
 try
 {
-    var orchestrator = services.GetRequiredService<AnalysisOrchestrator>();
-
     var files = FileSearchHelper.GetFilesBySeparatedPatterns(
         options.AnalysisDirectory,
         options.SearchPatterns,
@@ -117,6 +115,8 @@ try
         logger.LogWarning("No files found matching the search patterns.");
         return ExitStatus.InvalidInput(InvalidInputReason.NoFilesFound).ProcessExitCode;
     }
+
+    var orchestrator = services.GetRequiredService<AnalysisOrchestrator>();
 
     var status = orchestrator.Run(files);
 

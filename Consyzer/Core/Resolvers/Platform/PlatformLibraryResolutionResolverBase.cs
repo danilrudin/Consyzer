@@ -125,17 +125,8 @@ internal abstract class PlatformLibraryResolutionResolverBase
         StringComparer comparer
     )
     {
-        var result = new List<string>();
         var seen = new HashSet<string>(comparer);
 
-        foreach (var candidate in candidates)
-        {
-            if (seen.Add(candidate))
-            {
-                result.Add(candidate);
-            }
-        }
-
-        return result;
+        return [.. candidates.Where(seen.Add)];
     }
 }
