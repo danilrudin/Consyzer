@@ -1,4 +1,3 @@
-using Xunit;
 using System.Security.Cryptography;
 using Consyzer.Core.Cryptography;
 using static Consyzer.Tests.TestInfrastructure.Constants;

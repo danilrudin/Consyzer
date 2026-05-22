@@ -1,5 +1,4 @@
-﻿using Xunit;
-using Consyzer.Core.Caching;
+﻿using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
 using static Consyzer.Tests.TestInfrastructure.Constants;
 

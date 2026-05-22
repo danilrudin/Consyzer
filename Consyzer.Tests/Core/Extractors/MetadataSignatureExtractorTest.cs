@@ -1,5 +1,4 @@
-﻿using Xunit;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Reflection.Metadata;
 using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;

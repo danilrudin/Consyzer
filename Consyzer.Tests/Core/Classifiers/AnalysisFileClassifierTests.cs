@@ -1,5 +1,4 @@
-﻿using Xunit;
-using Consyzer.Core.Caching;
+﻿using Consyzer.Core.Caching;
 using Consyzer.Core.Classifiers;
 using static Consyzer.Tests.TestInfrastructure.Constants;
 using static Consyzer.Tests.TestInfrastructure.Helpers.MatchesHelper;

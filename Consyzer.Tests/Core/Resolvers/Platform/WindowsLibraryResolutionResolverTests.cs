@@ -1,5 +1,4 @@
-﻿using Xunit;
-using Consyzer.Core.Models;
+﻿using Consyzer.Core.Models;
 using Consyzer.Core.Resolvers.Platform;
 
 namespace Consyzer.Tests.Core.Resolvers.Platform;
@@ -18,11 +17,15 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
 
     private readonly string _analyzedDirectory = Path.Combine(Path.GetTempPath(), "analyzed-" + Guid.NewGuid());
     private readonly string _envPathDirectory = Path.Combine(Path.GetTempPath(), "envpath-" + Guid.NewGuid());
+    private readonly FileInfo _targetFile;
 
     public WindowsLibraryResolutionResolverTests()
     {
         Directory.CreateDirectory(_analyzedDirectory);
         Directory.CreateDirectory(_envPathDirectory);
+
+        _targetFile = new FileInfo(Path.Combine(_analyzedDirectory, "Target.dll"));
+        File.WriteAllText(_targetFile.FullName, DummyFileContent);
     }
 
     [Fact]
@@ -34,12 +37,15 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         try
         {
             var resolver = new WindowsLibraryResolutionResolver(_analyzedDirectory);
-            var result = resolver.Resolve(LibAnalyzed);
+            var result = Resolve(resolver, LibAnalyzed);
 
-            Assert.Equal(ResolutionState.Resolved, result.State);
-            Assert.NotNull(result.Resolved);
-            Assert.Equal(MechanismKind.ApplicationDirectory, result.Resolved!.MechanismKind);
-            Assert.Equal(Path.GetFullPath(libraryPath), result.Resolved.Path);
+            Assert.Equal(_targetFile.FullName, result.TargetPath);
+            Assert.Equal(LibAnalyzed, result.LibraryName);
+            Assert.Equal("Windows", result.Platform);
+            Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
+            Assert.NotNull(result.ResolvedPresence);
+            Assert.Equal(MechanismKind.ApplicationDirectory, result.ResolvedPresence!.MechanismKind);
+            Assert.Equal(Path.GetFullPath(libraryPath), result.ResolvedPresence.Path);
             Assert.Empty(result.HeuristicCandidates);
             Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
         }
@@ -52,23 +58,30 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
     [Fact]
     public void Resolve_ShouldReturnResolvedWithDefaultSystemLocations_WhenLibraryExistsInSystemDirectory()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         var systemDirectory = Environment.SystemDirectory;
         var libraryName = Directory.GetFiles(systemDirectory)
             .Select(Path.GetFileName)
-            .FirstOrDefault(name => name?.EndsWith(DllExtension, StringComparison.OrdinalIgnoreCase) is true
-        );
+            .FirstOrDefault(name => name?.EndsWith(DllExtension, StringComparison.OrdinalIgnoreCase) is true);
 
         Assert.False(string.IsNullOrWhiteSpace(libraryName));
 
         var resolver = new WindowsLibraryResolutionResolver(_analyzedDirectory);
-        var result = resolver.Resolve(libraryName!);
+        var result = Resolve(resolver, libraryName!);
 
-        Assert.Equal(ResolutionState.Resolved, result.State);
-        Assert.NotNull(result.Resolved);
-        Assert.Equal(MechanismKind.DefaultSystemLocations, result.Resolved!.MechanismKind);
+        Assert.Equal(_targetFile.FullName, result.TargetPath);
+        Assert.Equal(libraryName, result.LibraryName);
+        Assert.Equal("Windows", result.Platform);
+        Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
+        Assert.NotNull(result.ResolvedPresence);
+        Assert.Equal(MechanismKind.DefaultSystemLocations, result.ResolvedPresence!.MechanismKind);
         Assert.Equal(
             Path.GetFullPath(Path.Combine(systemDirectory, libraryName!)),
-            result.Resolved.Path
+            result.ResolvedPresence.Path
         );
         Assert.Empty(result.HeuristicCandidates);
         Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
@@ -80,7 +93,7 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         var libraryPath = Path.Combine(_envPathDirectory, LibEnvironment);
         File.WriteAllText(libraryPath, DummyFileContent);
 
-        var originalPath = Environment.GetEnvironmentVariable(PathVariableName) ?? string.Empty;
+        var originalPath = Environment.GetEnvironmentVariable(PathVariableName);
         Environment.SetEnvironmentVariable(
             PathVariableName,
             _envPathDirectory + Path.PathSeparator + originalPath
@@ -89,12 +102,15 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         try
         {
             var resolver = new WindowsLibraryResolutionResolver(_analyzedDirectory);
-            var result = resolver.Resolve(LibEnvironment);
+            var result = Resolve(resolver, LibEnvironment);
 
-            Assert.Equal(ResolutionState.Resolved, result.State);
-            Assert.NotNull(result.Resolved);
-            Assert.Equal(MechanismKind.EnvironmentOverride, result.Resolved!.MechanismKind);
-            Assert.Equal(Path.GetFullPath(libraryPath), result.Resolved.Path);
+            Assert.Equal(_targetFile.FullName, result.TargetPath);
+            Assert.Equal(LibEnvironment, result.LibraryName);
+            Assert.Equal("Windows", result.Platform);
+            Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
+            Assert.NotNull(result.ResolvedPresence);
+            Assert.Equal(MechanismKind.EnvironmentOverride, result.ResolvedPresence!.MechanismKind);
+            Assert.Equal(Path.GetFullPath(libraryPath), result.ResolvedPresence.Path);
             Assert.Empty(result.HeuristicCandidates);
             Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
         }
@@ -114,12 +130,15 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         try
         {
             var resolver = new WindowsLibraryResolutionResolver(_analyzedDirectory);
-            var result = resolver.Resolve(libraryPath);
+            var result = Resolve(resolver, libraryPath);
 
-            Assert.Equal(ResolutionState.Resolved, result.State);
-            Assert.NotNull(result.Resolved);
-            Assert.Equal(MechanismKind.ExplicitPath, result.Resolved!.MechanismKind);
-            Assert.Equal(Path.GetFullPath(libraryPath), result.Resolved.Path);
+            Assert.Equal(_targetFile.FullName, result.TargetPath);
+            Assert.Equal(libraryPath, result.LibraryName);
+            Assert.Equal("Windows", result.Platform);
+            Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
+            Assert.NotNull(result.ResolvedPresence);
+            Assert.Equal(MechanismKind.ExplicitPath, result.ResolvedPresence!.MechanismKind);
+            Assert.Equal(Path.GetFullPath(libraryPath), result.ResolvedPresence.Path);
             Assert.Empty(result.HeuristicCandidates);
             Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
         }
@@ -143,12 +162,15 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         try
         {
             var resolver = new WindowsLibraryResolutionResolver(_analyzedDirectory);
-            var result = resolver.Resolve(relativeRequestPath);
+            var result = Resolve(resolver, relativeRequestPath);
 
-            Assert.Equal(ResolutionState.Resolved, result.State);
-            Assert.NotNull(result.Resolved);
-            Assert.Equal(MechanismKind.ExplicitPath, result.Resolved!.MechanismKind);
-            Assert.Equal(Path.GetFullPath(relativeLibraryPath), result.Resolved.Path);
+            Assert.Equal(_targetFile.FullName, result.TargetPath);
+            Assert.Equal(relativeRequestPath, result.LibraryName);
+            Assert.Equal("Windows", result.Platform);
+            Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
+            Assert.NotNull(result.ResolvedPresence);
+            Assert.Equal(MechanismKind.ExplicitPath, result.ResolvedPresence!.MechanismKind);
+            Assert.Equal(Path.GetFullPath(relativeLibraryPath), result.ResolvedPresence.Path);
             Assert.Empty(result.HeuristicCandidates);
             Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
         }
@@ -162,10 +184,13 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
     public void Resolve_ShouldReturnInconclusive_WhenLibraryIsNotFound()
     {
         var resolver = new WindowsLibraryResolutionResolver(_analyzedDirectory);
-        var result = resolver.Resolve(LibMissing);
+        var result = Resolve(resolver, LibMissing);
 
-        Assert.Equal(ResolutionState.Inconclusive, result.State);
-        Assert.Null(result.Resolved);
+        Assert.Equal(_targetFile.FullName, result.TargetPath);
+        Assert.Equal(LibMissing, result.LibraryName);
+        Assert.Equal("Windows", result.Platform);
+        Assert.Equal(ResolutionState.Inconclusive, result.ResolutionState);
+        Assert.Null(result.ResolvedPresence);
         Assert.Empty(result.HeuristicCandidates);
         Assert.NotEqual(NotSimulatedMechanisms.None, result.NotSimulated);
         Assert.True(result.NotSimulated.HasFlag(NotSimulatedMechanisms.WindowsKnownDlls));
@@ -177,6 +202,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         DeleteIfExists(_analyzedDirectory);
         DeleteIfExists(_envPathDirectory);
     }
+
+    private LibraryResolutionResult Resolve(WindowsLibraryResolutionResolver resolver, string libraryName)
+        => resolver.Resolve(new LibraryResolutionContext(_targetFile, libraryName));
 
     private static void DeleteIfExists(string path)
     {
