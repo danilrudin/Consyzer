@@ -6,9 +6,4 @@ internal static class PlatformStringComparisonHelper
         OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;
-
-    public static StringComparer LibraryNameComparer =>
-        OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal;
 }

@@ -78,14 +78,12 @@ internal sealed class ConsoleReportWriter(
             .PushIndent()
             .IndexedSection(libraryResolutions, (b, libraryResolution) =>
             {
+                b.Line(Label.Library.TargetPath, libraryResolution.TargetPath);
                 b.Line(Label.Library.Name, libraryResolution.LibraryName);
-                b.Line(Label.Library.State, libraryResolution.State);
-
-                if (libraryResolution.Resolved is not null)
-                {
-                    b.Line(Label.Library.ResolvedPath, libraryResolution.Resolved.Path);
-                    b.Line(Label.Library.MechanismKind, libraryResolution.Resolved.MechanismKind);
-                }
+                b.Line(Label.Library.Platform, libraryResolution.Platform);
+                b.Line(Label.Library.ResolutionState, libraryResolution.ResolutionState);
+                b.Line(Label.Library.ResolvedPath, libraryResolution.ResolvedPresence?.Path ?? "null");
+                b.Line(Label.Library.MechanismKind, libraryResolution.ResolvedPresence?.MechanismKind.ToString() ?? "null");
 
                 b.Line(
                     Label.Library.HeuristicCandidates,

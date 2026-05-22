@@ -4,7 +4,7 @@ namespace Consyzer.Core.Resolvers.Platform;
 
 internal abstract class PlatformLibraryResolutionResolverBase
 {
-    public abstract LibraryResolutionResult Resolve(string file);
+    public abstract LibraryResolutionResult Resolve(LibraryResolutionContext context);
 
     protected static bool TryGetExplicitPathCandidate(string path, out string? candidate)
     {
@@ -26,62 +26,86 @@ internal abstract class PlatformLibraryResolutionResolverBase
         return EnumerateExistingCandidatePaths(fileNames, directories).FirstOrDefault();
     }
 
-    protected static IEnumerable<string> SplitSearchPath(string? path)
+    protected static IEnumerable<string> SplitSearchPath(
+        string? path,
+        bool emptySegmentMeansCurrentDirectory = false
+    )
     {
         if (string.IsNullOrWhiteSpace(path)) yield break;
 
-        var parts = path.Split(
-            Path.PathSeparator,
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
-        );
-
-        foreach (var part in parts)
+        foreach (var rawPart in path.Split(Path.PathSeparator, StringSplitOptions.None))
         {
-            var p = part.Trim('"');
-            if (p.Length == 0) continue;
+            var part = rawPart.Trim('"');
 
-            yield return p;
+            if (part.Length == 0)
+            {
+                if (emptySegmentMeansCurrentDirectory)
+                {
+                    yield return Directory.GetCurrentDirectory();
+                }
+
+                continue;
+            }
+
+            yield return part;
         }
     }
 
     protected static LibraryResolutionResult CreateResolved(
-        string requestedName,
+        LibraryResolutionContext context,
+        string platform,
         string path,
         MechanismKind kind,
-        IReadOnlyList<string>? heuristicCandidates = null
+        IReadOnlyList<string>? heuristicCandidates = null,
+        NotSimulatedMechanisms notSimulated = NotSimulatedMechanisms.None
     )
         => new()
         {
-            LibraryName = requestedName,
-            State = ResolutionState.Resolved,
-            Resolved = new ResolvedPresence(path, kind),
+            TargetPath = context.TargetFile.FullName,
+            LibraryName = context.LibraryName,
+            Platform = platform,
+            ResolutionState = ResolutionState.Resolved,
+            ResolvedPresence = new ResolvedPresence(path, kind),
             HeuristicCandidates = heuristicCandidates ?? [],
-            NotSimulated = NotSimulatedMechanisms.None
+            NotSimulated = notSimulated
         };
 
     protected static LibraryResolutionResult CreateMissing(
-        string requestedName,
+        LibraryResolutionContext context,
+        string platform,
         IReadOnlyList<string>? heuristicCandidates = null
     )
         => new()
         {
-            LibraryName = requestedName,
-            State = ResolutionState.Missing,
-            Resolved = null,
+            TargetPath = context.TargetFile.FullName,
+            LibraryName = context.LibraryName,
+            Platform = platform,
+            ResolutionState = ResolutionState.Missing,
+            ResolvedPresence = null,
             HeuristicCandidates = heuristicCandidates ?? [],
             NotSimulated = NotSimulatedMechanisms.None
         };
 
     protected static LibraryResolutionResult CreateInconclusive(
-        string requestedName,
+        LibraryResolutionContext context,
+        string platform,
+        NotSimulatedMechanisms notSimulated
+    )
+        => CreateInconclusive(context, platform, [], notSimulated);
+
+    protected static LibraryResolutionResult CreateInconclusive(
+        LibraryResolutionContext context,
+        string platform,
         IReadOnlyList<string> heuristicCandidates,
         NotSimulatedMechanisms notSimulated
     )
         => new()
         {
-            LibraryName = requestedName,
-            State = ResolutionState.Inconclusive,
-            Resolved = null,
+            TargetPath = context.TargetFile.FullName,
+            LibraryName = context.LibraryName,
+            Platform = platform,
+            ResolutionState = ResolutionState.Inconclusive,
+            ResolvedPresence = null,
             HeuristicCandidates = heuristicCandidates,
             NotSimulated = notSimulated
         };

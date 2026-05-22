@@ -14,9 +14,14 @@ internal sealed class LibraryResolutionAnalyzer(
     public IReadOnlyList<LibraryResolutionResult> Analyze(IEnumerable<PInvokeMethodGroup> methodGroups)
     {
         return [.. methodGroups
-            .SelectMany(g => g.Methods)
-            .Select(m => m.ImportName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(_resolver.Resolve)];
+            .SelectMany(group => group.Methods
+                .Select(method => method.ImportName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(libraryName => _resolver.Resolve(new LibraryResolutionContext(
+                    group.File,
+                    libraryName
+                )))
+            )
+        ];
     }
 }

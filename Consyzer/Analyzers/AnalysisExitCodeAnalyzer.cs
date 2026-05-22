@@ -12,7 +12,7 @@ internal sealed class AnalysisExitCodeAnalyzer
 
         foreach (var result in results)
         {
-            switch (result.State)
+            switch (result.ResolutionState)
             {
                 case ResolutionState.Missing:
                     hasMissing = true;

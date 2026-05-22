@@ -47,8 +47,7 @@ internal sealed class AnalysisOrchestrator(
 
         if (pInvokeGroups.Count == 0)
         {
-            logger.LogWarning("No P/Invoke methods found in the assemblies.");
-            return ExitStatus.InvalidInput(InvalidInputReason.NoPInvokeMethodsFound);
+            logger.LogInformation("No P/Invoke methods found in the assemblies.");
         }
 
         logger.LogInformation("Analyzing native library resolution...");
@@ -60,9 +59,9 @@ internal sealed class AnalysisOrchestrator(
             EcmaAssemblies = metadataList.Count,
             AssembliesWithPInvoke = pInvokeGroups.Count,
             TotalPInvokeMethods = pInvokeGroups.Sum(g => g.Methods.Count),
-            ResolvedLibraries = libraryResolutions.Count(r => r.State == ResolutionState.Resolved),
-            MissingLibraries = libraryResolutions.Count(r => r.State == ResolutionState.Missing),
-            InconclusiveLibraries = libraryResolutions.Count(r => r.State == ResolutionState.Inconclusive)
+            ResolvedLibraries = libraryResolutions.Count(r => r.ResolutionState == ResolutionState.Resolved),
+            MissingLibraries = libraryResolutions.Count(r => r.ResolutionState == ResolutionState.Missing),
+            InconclusiveLibraries = libraryResolutions.Count(r => r.ResolutionState == ResolutionState.Inconclusive)
         };
 
         var outcome = new AnalysisOutcome

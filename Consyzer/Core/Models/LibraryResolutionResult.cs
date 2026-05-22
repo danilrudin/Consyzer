@@ -2,25 +2,41 @@
 
 internal sealed class LibraryResolutionResult
 {
-    public required string LibraryName { get; init; }
-
-    public required ResolutionState State { get; init; }
+    /// <summary>
+    /// Path to the managed binary where the native dependency was declared.
+    /// </summary>
+    public required string TargetPath { get; init; }
 
     /// <summary>
-    /// Resolved library information.
-    /// Set only when <see cref="State"/> is <see cref="ResolutionState.Resolved"/>.
+    /// Native library name declared by the target binary.
     /// </summary>
-    public ResolvedPresence? Resolved { get; init; }
+    public required string LibraryName { get; init; }
+
+    /// <summary>
+    /// Platform whose native library loading rules were used for resolution.
+    /// </summary>
+    public required string Platform { get; init; }
+
+    /// <summary>
+    /// Final resolution state for the native dependency.
+    /// </summary>
+    public required ResolutionState ResolutionState { get; init; }
+
+    /// <summary>
+    /// Resolved native library information.
+    /// Set only when <see cref="ResolutionState"/> is <see cref="ResolutionState.Resolved"/>.
+    /// </summary>
+    public ResolvedPresence? ResolvedPresence { get; init; }
 
     /// <summary>
     /// Candidate paths discovered by heuristic checks.
-    /// Reported for diagnostics only; do not affect the resolution result.
+    /// These candidates are reported for diagnostics only and do not affect <see cref="ResolutionState"/>.
     /// </summary>
     public required IReadOnlyList<string> HeuristicCandidates { get; init; }
 
     /// <summary>
-    /// Flags indicating which loader mechanisms are not simulated by the current resolver.
-    /// These flags explain why the resolution may be inconclusive.
+    /// Loader mechanisms that are not simulated by the current resolver.
+    /// These flags explain why unresolved results can be inconclusive.
     /// </summary>
     public required NotSimulatedMechanisms NotSimulated { get; init; }
 }
@@ -55,7 +71,7 @@ internal enum NotSimulatedMechanisms : ulong
 {
     None = 0,
 
-    // Windows (bit range 0..9)
+    // Windows (bit range 0..15)
     WindowsSxS = 1UL << 0,
     WindowsKnownDlls = 1UL << 1,
     WindowsDllRedirection = 1UL << 2,
@@ -67,21 +83,22 @@ internal enum NotSimulatedMechanisms : ulong
     WindowsAppPathsRegistry = 1UL << 8,
     WindowsDotNetSearchPathOverrides = 1UL << 9,
 
-    // Linux (bit range 10..16)
-    LinuxRPathRunPath = 1UL << 10,
-    LinuxLdSoCache = 1UL << 11,
-    LinuxLdSoConf = 1UL << 12,
-    LinuxSecureExecution = 1UL << 13,
-    LinuxTransitiveDependencies = 1UL << 14,
-    LinuxMultiarchDefaultPaths = 1UL << 15,
-    LinuxLdPreload = 1UL << 16,
+    // Linux (bit range 16..31)
+    LinuxRPathRunPath = 1UL << 16,
+    LinuxLdSoCache = 1UL << 17,
+    LinuxLdSoConf = 1UL << 18,
+    LinuxSecureExecution = 1UL << 19,
+    LinuxTransitiveDependencies = 1UL << 20,
+    LinuxMultiarchDefaultPaths = 1UL << 21,
+    LinuxLdPreload = 1UL << 22,
+    LinuxLdLibraryPathDynamicStringTokens = 1UL << 23,
 
-    // macOS (bit range 17..23)
-    MacOsAtRPathLoaderExecutablePath = 1UL << 17,
-    MacOsDyldFallbackLibraryPath = 1UL << 18,
-    MacOsProtectedProcessRestrictions = 1UL << 19,
-    MacOsDyldSharedCacheOrOverrides = 1UL << 20,
-    MacOsTransitiveDependencies = 1UL << 21,
-    MacOsDyldFrameworkPathOrFrameworkSearch = 1UL << 22,
-    MacOsDyldInsertLibraries = 1UL << 23
+    // macOS (bit range 32..47)
+    MacOsAtRPathLoaderExecutablePath = 1UL << 32,
+    MacOsDyldFallbackLibraryPath = 1UL << 33,
+    MacOsProtectedProcessRestrictions = 1UL << 34,
+    MacOsDyldSharedCacheOrOverrides = 1UL << 35,
+    MacOsTransitiveDependencies = 1UL << 36,
+    MacOsDyldFrameworkPathOrFrameworkSearch = 1UL << 37,
+    MacOsDyldInsertLibraries = 1UL << 38
 }

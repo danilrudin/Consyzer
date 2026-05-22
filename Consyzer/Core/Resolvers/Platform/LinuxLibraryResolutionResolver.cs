@@ -7,6 +7,7 @@ internal sealed class LinuxLibraryResolutionResolver(
     string analyzedDirectory
 ) : PlatformLibraryResolutionResolverBase
 {
+    private const string PlatformName = "Linux";
     private const string LibraryExtension = ".so";
     private const string EnvironmentVariablePath = "LD_LIBRARY_PATH";
 
@@ -35,18 +36,23 @@ internal sealed class LinuxLibraryResolutionResolver(
         "/usr/lib/arm-linux-gnueabihf"
     ];
 
-    public override LibraryResolutionResult Resolve(string file)
+    public override LibraryResolutionResult Resolve(LibraryResolutionContext context)
     {
-        var candidates = GetLibraryNameCandidates(file);
+        var candidates = GetLibraryNameCandidates(context.LibraryName);
         var heuristicCandidates = IsExplicitPath(candidates[0])
             ? []
             : CollectHeuristicCandidates(candidates);
 
-        if (TryResolveExplicit(file, candidates[0], heuristicCandidates, out var result)) return result;
-        if (TryResolveLdLibraryPath(file, candidates, heuristicCandidates, out result)) return result;
-        if (TryResolveDefaultSystemLocations(file, candidates, heuristicCandidates, out result)) return result;
+        var ldLibraryPath = Environment.GetEnvironmentVariable(EnvironmentVariablePath);
+        var notSimulatedCaveats = ContainsDynamicStringToken(ldLibraryPath)
+            ? NotSimulatedMechanisms.LinuxLdLibraryPathDynamicStringTokens
+            : NotSimulatedMechanisms.None;
 
-        return CreateInconclusive(file, heuristicCandidates, NotSimulated);
+        if (TryResolveExplicit(context, candidates[0], heuristicCandidates, out var result)) return result;
+        if (TryResolveLdLibraryPath(context, candidates, heuristicCandidates, ldLibraryPath, notSimulatedCaveats, out result)) return result;
+        if (TryResolveDefaultSystemLocations(context, candidates, heuristicCandidates, notSimulatedCaveats, out result)) return result;
+
+        return CreateInconclusive(context, PlatformName, heuristicCandidates, NotSimulated | notSimulatedCaveats);
     }
 
     private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
@@ -58,14 +64,7 @@ internal sealed class LinuxLibraryResolutionResolver(
 
         if (EndsWithSharedObjectName(input))
         {
-            var extensioned = input + LibraryExtension;
-            return DistinctCandidates(
-            [
-                input,
-                WithLibPrefix(input),
-                extensioned,
-                WithLibPrefix(extensioned)
-            ], StringComparer.Ordinal);
+            return DistinctCandidates([input, WithLibPrefix(input)], StringComparer.Ordinal);
         }
 
         var canonical = input + LibraryExtension;
@@ -85,7 +84,7 @@ internal sealed class LinuxLibraryResolutionResolver(
     }
 
     private static bool TryResolveExplicit(
-        string requestedName,
+        LibraryResolutionContext context,
         string normalizedExplicitPath,
         IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
@@ -98,22 +97,24 @@ internal sealed class LinuxLibraryResolutionResolver(
         }
 
         result = candidate is not null
-            ? CreateResolved(requestedName, candidate, MechanismKind.ExplicitPath, heuristicCandidates)
-            : CreateMissing(requestedName, heuristicCandidates);
+            ? CreateResolved(context, PlatformName, candidate, MechanismKind.ExplicitPath, heuristicCandidates)
+            : CreateMissing(context, PlatformName, heuristicCandidates);
 
         return true;
     }
 
     private static bool TryResolveLdLibraryPath(
-        string requestedName,
+        LibraryResolutionContext context,
         IReadOnlyList<string> candidates,
         IReadOnlyList<string> heuristicCandidates,
+        string? ldLibraryPath,
+        NotSimulatedMechanisms notSimulatedCaveats,
         out LibraryResolutionResult result
     )
     {
         var candidate = TryResolveInDirectories(
             candidates,
-            SplitSearchPath(Environment.GetEnvironmentVariable(EnvironmentVariablePath))
+            SplitSearchPath(ldLibraryPath, emptySegmentMeansCurrentDirectory: true)
         );
 
         if (candidate is null)
@@ -122,14 +123,21 @@ internal sealed class LinuxLibraryResolutionResolver(
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.EnvironmentOverride, heuristicCandidates);
+        result = CreateResolved(
+            context,
+            PlatformName,
+            candidate,
+            MechanismKind.EnvironmentOverride,
+            heuristicCandidates,
+            notSimulatedCaveats);
         return true;
     }
 
     private static bool TryResolveDefaultSystemLocations(
-        string requestedName,
+        LibraryResolutionContext context,
         IReadOnlyList<string> candidates,
         IReadOnlyList<string> heuristicCandidates,
+        NotSimulatedMechanisms notSimulatedCaveats,
         out LibraryResolutionResult result
     )
     {
@@ -140,7 +148,13 @@ internal sealed class LinuxLibraryResolutionResolver(
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.DefaultSystemLocations, heuristicCandidates);
+        result = CreateResolved(
+            context,
+            PlatformName,
+            candidate,
+            MechanismKind.DefaultSystemLocations,
+            heuristicCandidates,
+            notSimulatedCaveats);
         return true;
     }
 
@@ -148,7 +162,17 @@ internal sealed class LinuxLibraryResolutionResolver(
         => input.EndsWith(LibraryExtension, StringComparison.Ordinal)
         || input.Contains(LibraryExtension + ".", StringComparison.Ordinal);
 
-    private static string WithLibPrefix(string input) => "lib" + input;
+    private static string WithLibPrefix(string input)
+        => input.StartsWith("lib", StringComparison.Ordinal) ? input : "lib" + input;
+
+    private static bool ContainsDynamicStringToken(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+
+        return path.Contains("$ORIGIN", StringComparison.Ordinal)
+            || path.Contains("$LIB", StringComparison.Ordinal)
+            || path.Contains("$PLATFORM", StringComparison.Ordinal);
+    }
 
     private static List<string> CollectCandidatePaths(
         IReadOnlyList<string> fileNames,

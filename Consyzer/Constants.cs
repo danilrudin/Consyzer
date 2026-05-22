@@ -101,8 +101,10 @@ internal static class Constants
 
                 public static class Library
                 {
+                    public const string TargetPath = nameof(LibraryResolutionResult.TargetPath);
                     public const string Name = nameof(LibraryResolutionResult.LibraryName);
-                    public const string State = nameof(LibraryResolutionResult.State);
+                    public const string Platform = nameof(LibraryResolutionResult.Platform);
+                    public const string ResolutionState = nameof(LibraryResolutionResult.ResolutionState);
                     public const string ResolvedPath = nameof(ResolvedPresence.Path);
                     public const string MechanismKind = nameof(ResolvedPresence.MechanismKind);
                     public const string HeuristicCandidates = nameof(LibraryResolutionResult.HeuristicCandidates);

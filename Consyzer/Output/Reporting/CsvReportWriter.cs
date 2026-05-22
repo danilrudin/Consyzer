@@ -95,8 +95,10 @@ internal sealed class CsvReportWriter(
 
         builder.Header(
         [
+            Structure.Label.Library.TargetPath,
             Structure.Label.Library.Name,
-            Structure.Label.Library.State,
+            Structure.Label.Library.Platform,
+            Structure.Label.Library.ResolutionState,
             Structure.Label.Library.ResolvedPath,
             Structure.Label.Library.MechanismKind,
             Structure.Label.Library.HeuristicCandidates,
@@ -107,10 +109,12 @@ internal sealed class CsvReportWriter(
         {
             builder.Record(
             [
+                SerializeValue(libraryResolution.TargetPath),
                 SerializeValue(libraryResolution.LibraryName),
-                SerializeValue(libraryResolution.State.ToString()),
-                SerializeValue(libraryResolution.Resolved?.Path),
-                SerializeValue(libraryResolution.Resolved?.MechanismKind.ToString()),
+                SerializeValue(libraryResolution.Platform),
+                SerializeValue(libraryResolution.ResolutionState.ToString()),
+                SerializeValue(libraryResolution.ResolvedPresence?.Path),
+                SerializeValue(libraryResolution.ResolvedPresence?.MechanismKind.ToString()),
                 SerializeValue(libraryResolution.HeuristicCandidates),
                 SerializeValue(libraryResolution.NotSimulated.ToString())
             ]);
@@ -160,14 +164,8 @@ internal sealed class CsvReportWriter(
 
     private string EscapeList(IEnumerable<string> items)
     {
-        var delimiter = _options.Delimiter;
-        var innerDelimiter = GetSafeInnerDelimiter(delimiter);
-
-        var safeItems = items
-            .Select(item => (item ?? string.Empty)
-            .Replace(delimiter, ' '));
-
-        var joined = string.Join(innerDelimiter, safeItems);
+        var innerDelimiter = GetSafeInnerDelimiter(_options.Delimiter);
+        var joined = string.Join(innerDelimiter, items.Select(item => item ?? string.Empty));
 
         return EscapeValue(joined);
     }

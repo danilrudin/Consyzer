@@ -6,6 +6,7 @@ internal sealed class WindowsLibraryResolutionResolver(
     string analyzedDirectory
 ) : PlatformLibraryResolutionResolverBase
 {
+    private const string PlatformName = "Windows";
     private const string LibraryExtension = ".dll";
     private const string ExecutableExtension = ".exe";
     private const string EnvironmentVariablePath = "PATH";
@@ -25,18 +26,17 @@ internal sealed class WindowsLibraryResolutionResolver(
         | NotSimulatedMechanisms.WindowsAppPathsRegistry
         | NotSimulatedMechanisms.WindowsDotNetSearchPathOverrides;
 
-    public override LibraryResolutionResult Resolve(string file)
+    public override LibraryResolutionResult Resolve(LibraryResolutionContext context)
     {
-        var candidates = GetLibraryNameCandidates(file);
-        var heuristicCandidates = Array.Empty<string>();
+        var candidates = GetLibraryNameCandidates(context.LibraryName);
 
-        if (TryResolveExplicit(file, candidates[0], heuristicCandidates, out var result)) return result;
-        if (TryResolveApplicationDirectory(file, candidates, heuristicCandidates, out result)) return result;
-        if (TryResolveDefaultSystemLocations(file, candidates, heuristicCandidates, out result)) return result;
-        if (TryResolveCurrentDirectory(file, candidates, heuristicCandidates, out result)) return result;
-        if (TryResolveEnvironmentPath(file, candidates, heuristicCandidates, out result)) return result;
+        if (TryResolveExplicit(context, candidates[0], out var result)) return result;
+        if (TryResolveApplicationDirectory(context, candidates, out result)) return result;
+        if (TryResolveDefaultSystemLocations(context, candidates, out result)) return result;
+        if (TryResolveCurrentDirectory(context, candidates, out result)) return result;
+        if (TryResolveEnvironmentPath(context, candidates, out result)) return result;
 
-        return CreateInconclusive(file, heuristicCandidates, NotSimulated);
+        return CreateInconclusive(context, PlatformName, NotSimulated);
     }
 
     private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
@@ -56,9 +56,8 @@ internal sealed class WindowsLibraryResolutionResolver(
     }
 
     private static bool TryResolveExplicit(
-        string requestedName,
+        LibraryResolutionContext context,
         string normalized,
-        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
@@ -69,16 +68,15 @@ internal sealed class WindowsLibraryResolutionResolver(
         }
 
         result = candidate is not null
-            ? CreateResolved(requestedName, candidate, MechanismKind.ExplicitPath, heuristicCandidates)
-            : CreateMissing(requestedName, heuristicCandidates);
+            ? CreateResolved(context, PlatformName, candidate, MechanismKind.ExplicitPath)
+            : CreateMissing(context, PlatformName);
 
         return true;
     }
 
     private bool TryResolveApplicationDirectory(
-        string requestedName,
+        LibraryResolutionContext context,
         IReadOnlyList<string> candidates,
-        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
@@ -89,14 +87,13 @@ internal sealed class WindowsLibraryResolutionResolver(
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.ApplicationDirectory, heuristicCandidates);
+        result = CreateResolved(context, PlatformName, candidate, MechanismKind.ApplicationDirectory);
         return true;
     }
 
     private static bool TryResolveDefaultSystemLocations(
-        string requestedName,
+        LibraryResolutionContext context,
         IReadOnlyList<string> candidates,
-        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
@@ -110,14 +107,13 @@ internal sealed class WindowsLibraryResolutionResolver(
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.DefaultSystemLocations, heuristicCandidates);
+        result = CreateResolved(context, PlatformName, candidate, MechanismKind.DefaultSystemLocations);
         return true;
     }
 
     private static bool TryResolveCurrentDirectory(
-        string requestedName,
+        LibraryResolutionContext context,
         IReadOnlyList<string> candidates,
-        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
@@ -128,14 +124,13 @@ internal sealed class WindowsLibraryResolutionResolver(
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.CurrentDirectory, heuristicCandidates);
+        result = CreateResolved(context, PlatformName, candidate, MechanismKind.CurrentDirectory);
         return true;
     }
 
     private static bool TryResolveEnvironmentPath(
-        string requestedName,
+        LibraryResolutionContext context,
         IReadOnlyList<string> candidates,
-        IReadOnlyList<string> heuristicCandidates,
         out LibraryResolutionResult result
     )
     {
@@ -150,7 +145,7 @@ internal sealed class WindowsLibraryResolutionResolver(
             return false;
         }
 
-        result = CreateResolved(requestedName, candidate, MechanismKind.EnvironmentOverride, heuristicCandidates);
+        result = CreateResolved(context, PlatformName, candidate, MechanismKind.EnvironmentOverride);
         return true;
     }
 }

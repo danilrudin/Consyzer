@@ -5,10 +5,7 @@ internal readonly record struct ExitStatus(
     InvalidInputReason? InvalidReason = null
 )
 {
-    public int ProcessExitCode =>
-        Code == AnalysisExitCode.InvalidInput && InvalidReason is not null
-            ? (int)InvalidReason.Value
-            : (int)Code;
+    public int ProcessExitCode => (int)Code;
 
     public static ExitStatus Success() => new(AnalysisExitCode.Success);
 
@@ -35,6 +32,5 @@ internal enum InvalidInputReason
     NoAnalysisDirectory = -1,
     NoSearchPatterns = -2,
     NoFilesFound = -3,
-    AllFilesInvalid = -4,
-    NoPInvokeMethodsFound = -5
+    AllFilesInvalid = -4
 }

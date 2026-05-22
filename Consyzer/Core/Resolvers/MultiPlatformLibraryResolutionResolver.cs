@@ -9,12 +9,12 @@ internal sealed class MultiPlatformLibraryResolutionResolver(
 {
     private readonly PlatformLibraryResolutionResolverBase _resolver = true switch
     {
-        _ when OperatingSystem.IsWindows() 
+        _ when OperatingSystem.IsWindows()
             => new WindowsLibraryResolutionResolver(analyzedDirectory),
-        _ when OperatingSystem.IsLinux() 
+        _ when OperatingSystem.IsLinux()
             => new LinuxLibraryResolutionResolver(analyzedDirectory),
         _ => throw new PlatformNotSupportedException()
     };
 
-    public LibraryResolutionResult Resolve(string file) => _resolver.Resolve(file);
+    public LibraryResolutionResult Resolve(LibraryResolutionContext context) => _resolver.Resolve(context);
 }

@@ -98,18 +98,16 @@ internal sealed class XmlReportWriter(
         {
             writer.WriteStartElement(Structure.Element.Library);
 
+            writer.WriteElementString(Structure.Label.Library.TargetPath, libraryResolution.TargetPath);
             writer.WriteElementString(Structure.Label.Library.Name, libraryResolution.LibraryName);
-            writer.WriteElementString(Structure.Label.Library.State, libraryResolution.State.ToString());
+            writer.WriteElementString(Structure.Label.Library.Platform, libraryResolution.Platform);
+            writer.WriteElementString(Structure.Label.Library.ResolutionState, libraryResolution.ResolutionState.ToString());
+            writer.WriteElementString(Structure.Label.Library.ResolvedPath, libraryResolution.ResolvedPresence?.Path);
 
-            if (libraryResolution.Resolved is not null)
-            {
-                writer.WriteElementString(Structure.Label.Library.ResolvedPath, libraryResolution.Resolved.Path);
-
-                writer.WriteElementString(
-                    Structure.Label.Library.MechanismKind,
-                    libraryResolution.Resolved.MechanismKind.ToString()
-                );
-            }
+            writer.WriteElementString(
+                Structure.Label.Library.MechanismKind,
+                libraryResolution.ResolvedPresence?.MechanismKind.ToString()
+            );
 
             writer.WriteStartElement(Structure.Label.Library.HeuristicCandidates);
 
