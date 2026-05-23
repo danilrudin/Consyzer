@@ -8,7 +8,6 @@ using Consyzer.Application;
 using Consyzer.Output.Logging;
 using Consyzer.Core.Models.Exit;
 using Consyzer.DependencyInjection;
-using static Consyzer.Constants.Search;
 
 var configuration = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
@@ -58,12 +57,14 @@ if (logger.IsEnabled(LogLevel.Debug))
     logger.LogDebug("{Message}", analysisLogBuilder.BuildAnalysisOptionsLog(options));
 }
 
+const char SearchPatternSeparator = ',';
+
 try
 {
     var files = AnalysisFileFinder.FindBySeparatedPatterns(
         options.AnalysisDirectory,
         options.SearchPatterns,
-        PatternSeparator,
+        SearchPatternSeparator,
         options.RecursiveSearch
     ).ToList();
 

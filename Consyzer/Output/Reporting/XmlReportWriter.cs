@@ -5,23 +5,23 @@ using Consyzer.Options;
 using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
-using static Consyzer.Constants.Output;
+using static Consyzer.Output.AnalysisOutputStructure;
 
 namespace Consyzer.Output.Reporting;
 
 internal sealed class XmlReportWriter(
     IOptions<AppSettingsOptions> options
-) : IReportWriter
+) : FileReportWriterBase
 {
     private const string ReportName = "ConsyzerReport";
+    private const string XmlExtension = ".xml";
 
     private readonly AppSettingsOptions.OutputOptions.XmlOptions _options = options.Value.Output.Xml;
 
-    public string Write(AnalysisOutcome outcome)
-    {
-        Directory.CreateDirectory(Destination.TargetDirectory);
-        var fullPath = Path.Combine(Destination.TargetDirectory, Destination.Xml);
+    protected override string FileExtension => XmlExtension;
 
+    protected override void WriteReport(AnalysisOutcome outcome, string fullPath)
+    {
         var encoding = Encoding.GetEncoding(_options.Encoding);
 
         using var writer = XmlWriter.Create(fullPath, new XmlWriterSettings
@@ -41,8 +41,6 @@ internal sealed class XmlReportWriter(
 
         writer.WriteEndElement();
         writer.WriteEndDocument();
-
-        return fullPath;
     }
 
     private static void WriteAssemblyMetadata(XmlWriter writer, IEnumerable<AssemblyMetadata> metadataList)
@@ -51,7 +49,7 @@ internal sealed class XmlReportWriter(
 
         foreach (var info in metadataList)
         {
-            writer.WriteStartElement(Structure.Element.Assembly);
+            writer.WriteStartElement(ElementName.Assembly);
             writer.WriteElementString(Structure.Label.Assembly.File, info.File.Name);
             writer.WriteElementString(Structure.Label.Assembly.Version, info.Version);
             writer.WriteElementString(
@@ -71,12 +69,12 @@ internal sealed class XmlReportWriter(
 
         foreach (var group in groups)
         {
-            writer.WriteStartElement(Structure.Element.Group);
+            writer.WriteStartElement(ElementName.Group);
             writer.WriteAttributeString(Structure.Label.PInvoke.File, group.File.Name);
 
             foreach (var method in group.Methods)
             {
-                writer.WriteStartElement(Structure.Element.Method);
+                writer.WriteStartElement(ElementName.Method);
                 writer.WriteElementString(Structure.Label.PInvoke.Signature, method.Signature.ToString());
                 writer.WriteElementString(Structure.Label.PInvoke.ImportName, method.ImportName);
                 writer.WriteElementString(Structure.Label.PInvoke.ImportFlags, method.ImportFlags.ToString());
@@ -98,7 +96,7 @@ internal sealed class XmlReportWriter(
 
         foreach (var libraryResolution in libraryResolutions)
         {
-            writer.WriteStartElement(Structure.Element.Library);
+            writer.WriteStartElement(ElementName.Library);
 
             writer.WriteElementString(Structure.Label.Library.TargetPath, libraryResolution.TargetPath);
             writer.WriteElementString(Structure.Label.Library.Name, libraryResolution.LibraryName);
@@ -115,7 +113,7 @@ internal sealed class XmlReportWriter(
 
             foreach (var heuristicCandidate in libraryResolution.HeuristicCandidates)
             {
-                writer.WriteElementString(Structure.Element.Candidate, heuristicCandidate);
+                writer.WriteElementString(ElementName.Candidate, heuristicCandidate);
             }
 
             writer.WriteEndElement();
@@ -144,5 +142,14 @@ internal sealed class XmlReportWriter(
         writer.WriteElementString(Structure.Label.Summary.InconclusiveLibraries, summary.InconclusiveLibraries.ToString());
 
         writer.WriteEndElement();
+    }
+
+    private static class ElementName
+    {
+        public const string Assembly = nameof(Assembly);
+        public const string Group = nameof(Group);
+        public const string Method = nameof(Method);
+        public const string Library = nameof(Library);
+        public const string Candidate = nameof(Candidate);
     }
 }

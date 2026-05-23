@@ -5,21 +5,22 @@ using Consyzer.Output.Builders;
 using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
-using static Consyzer.Constants.Output;
+using static Consyzer.Output.AnalysisOutputStructure;
 
 namespace Consyzer.Output.Reporting;
 
 internal sealed class CsvReportWriter(
     IOptions<AppSettingsOptions> options
-) : IReportWriter
+) : FileReportWriterBase
 {
+    private const string CsvExtension = ".csv";
+
     private readonly AppSettingsOptions.OutputOptions.CsvOptions _options = options.Value.Output.Csv;
 
-    public string Write(AnalysisOutcome outcome)
-    {
-        Directory.CreateDirectory(Destination.TargetDirectory);
-        var fullPath = Path.Combine(Destination.TargetDirectory, Destination.Csv);
+    protected override string FileExtension => CsvExtension;
 
+    protected override void WriteReport(AnalysisOutcome outcome, string fullPath)
+    {
         var encoding = Encoding.GetEncoding(_options.Encoding);
         var builder = new CsvTableBuilder(_options.Delimiter);
 
@@ -29,8 +30,6 @@ internal sealed class CsvReportWriter(
         WriteSummary(builder, outcome.Summary);
 
         File.WriteAllText(fullPath, builder.Build(), encoding);
-
-        return fullPath;
     }
 
     private void WriteAssemblyMetadata(CsvTableBuilder builder, IEnumerable<AssemblyMetadata> metadataList)

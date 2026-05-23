@@ -2,7 +2,6 @@
 using Consyzer.Options;
 using Consyzer.Output.Builders;
 using Consyzer.Core.Models.Analysis;
-using static Consyzer.Constants.Output.Structure;
 
 namespace Consyzer.Output.Logging;
 
@@ -45,4 +44,36 @@ internal sealed class AnalysisLogBuilder(
             .IndexedItems(fileClassification.EcmaAssemblies, f => f.Name)
             .PopIndent()
             .Build();
+
+    private static class Section
+    {
+        public static class Name
+        {
+            public const string AnalysisOptions = nameof(CommandLineOptions);
+            public const string FilesFound = "FilesFound";
+            public const string FileClassification = nameof(AnalysisFileClassification);
+            public const string NotEcma = nameof(AnalysisFileClassification.NonEcmaModules);
+            public const string NotAssemblies = nameof(AnalysisFileClassification.NonEcmaAssemblies);
+            public const string EcmaAssemblies = nameof(AnalysisFileClassification.EcmaAssemblies);
+        }
+
+        public static class Bracketed
+        {
+            public const string AnalysisOptions = $"[{Name.AnalysisOptions}]";
+            public const string FilesFound = $"[{Name.FilesFound}]";
+            public const string FileClassification = $"[{Name.FileClassification}]";
+            public const string NotEcma = $"[{Name.NotEcma}]";
+            public const string NotAssemblies = $"[{Name.NotAssemblies}]";
+            public const string EcmaAssemblies = $"[{Name.EcmaAssemblies}]";
+        }
+    }
+
+    private static class Label
+    {
+        public static class Options
+        {
+            public const string AnalysisDirectory = nameof(CommandLineOptions.AnalysisDirectory);
+            public const string SearchPatterns = nameof(CommandLineOptions.SearchPatterns);
+        }
+    }
 }

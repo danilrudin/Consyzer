@@ -7,15 +7,18 @@ using Consyzer.Options;
 using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Resolution;
 using Consyzer.Output.Reporting.Converters;
-using static Consyzer.Constants.Output;
 
 namespace Consyzer.Output.Reporting;
 
 internal sealed class JsonReportWriter(
     IOptions<AppSettingsOptions> options
-) : IReportWriter
+) : FileReportWriterBase
 {
+    private const string JsonExtension = ".json";
+
     private readonly AppSettingsOptions.OutputOptions.JsonOptions _options = options.Value.Output.Json;
+
+    protected override string FileExtension => JsonExtension;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -31,16 +34,11 @@ internal sealed class JsonReportWriter(
         }
     };
 
-    public string Write(AnalysisOutcome outcome)
+    protected override void WriteReport(AnalysisOutcome outcome, string fullPath)
     {
-        Directory.CreateDirectory(Destination.TargetDirectory);
-        var fullPath = Path.Combine(Destination.TargetDirectory, Destination.Json);
-
         var encoding = Encoding.GetEncoding(_options.Encoding);
 
         var json = JsonSerializer.Serialize(outcome, JsonOptions);
         File.WriteAllText(fullPath, json, encoding);
-
-        return fullPath;
     }
 }

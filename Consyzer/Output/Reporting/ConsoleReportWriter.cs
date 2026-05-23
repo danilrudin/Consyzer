@@ -4,7 +4,7 @@ using Consyzer.Output.Builders;
 using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
-using static Consyzer.Constants.Output.Structure;
+using static Consyzer.Output.AnalysisOutputStructure.Structure;
 
 namespace Consyzer.Output.Reporting;
 
