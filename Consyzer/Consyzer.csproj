@@ -46,15 +46,13 @@
 			<Value>
 				Program.cs,
 				Constants.cs,
-				AnalysisOrchestrator.cs,
-				Properties\**,
-				Output\**,
-				Options\**,
-				DependencyInjection\**,
-				Helpers\**,
-				Analyzers\**,
-				Core\Models\**,
-				Core\Extractors\Providers\StringSignatureTypeProvider.cs
+				DependencyInjection/**,
+				Options/**,
+				Helpers/**,
+				Application/**,
+				Output/**,
+				Core/Models/**,
+				Core/Extractors/Providers/StringSignatureTypeProvider.cs
 			</Value>
 		</SonarQubeSetting>
 	</ItemGroup>

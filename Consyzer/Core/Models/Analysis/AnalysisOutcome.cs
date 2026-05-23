@@ -1,4 +1,7 @@
-﻿namespace Consyzer.Core.Models;
+﻿using Consyzer.Core.Models.Metadata;
+using Consyzer.Core.Models.Resolution;
+
+namespace Consyzer.Core.Models.Analysis;
 
 internal sealed class AnalysisOutcome
 {

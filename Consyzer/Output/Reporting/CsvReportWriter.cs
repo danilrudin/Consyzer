@@ -1,8 +1,10 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Options;
 using Consyzer.Options;
-using Consyzer.Core.Models;
 using Consyzer.Output.Builders;
+using Consyzer.Core.Models.Analysis;
+using Consyzer.Core.Models.Metadata;
+using Consyzer.Core.Models.Resolution;
 using static Consyzer.Constants.Output;
 
 namespace Consyzer.Output.Reporting;

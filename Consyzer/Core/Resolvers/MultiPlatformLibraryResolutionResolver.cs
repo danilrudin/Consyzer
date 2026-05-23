@@ -1,4 +1,4 @@
-﻿using Consyzer.Core.Models;
+﻿using Consyzer.Core.Models.Resolution;
 using Consyzer.Core.Resolvers.Platform;
 
 namespace Consyzer.Core.Resolvers;

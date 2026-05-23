@@ -1,4 +1,4 @@
-﻿namespace Consyzer.Core.Models;
+﻿namespace Consyzer.Core.Models.Metadata;
 
 internal sealed class AssemblyMetadata
 {

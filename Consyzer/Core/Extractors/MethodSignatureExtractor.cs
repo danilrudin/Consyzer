@@ -1,8 +1,8 @@
 ﻿using System.Reflection;
 using System.Reflection.Metadata;
 using System.Collections.Immutable;
-using Consyzer.Core.Models;
 using Consyzer.Core.Extractors.Providers;
+using Consyzer.Core.Models.Metadata;
 
 namespace Consyzer.Core.Extractors;
 

@@ -4,7 +4,8 @@ using System.Text.Encodings.Web;
 using System.Reflection;
 using Microsoft.Extensions.Options;
 using Consyzer.Options;
-using Consyzer.Core.Models;
+using Consyzer.Core.Models.Analysis;
+using Consyzer.Core.Models.Resolution;
 using Consyzer.Output.Reporting.Converters;
 using static Consyzer.Constants.Output;
 

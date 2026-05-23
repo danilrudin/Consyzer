@@ -1,8 +1,8 @@
 ﻿using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using Consyzer.Core.Models;
 using Consyzer.Core.Caching;
 using Consyzer.Core.Cryptography;
+using Consyzer.Core.Models.Metadata;
 
 namespace Consyzer.Core.Extractors;
 

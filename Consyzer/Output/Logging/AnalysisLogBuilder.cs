@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using Consyzer.Options;
-using Consyzer.Core.Models;
 using Consyzer.Output.Builders;
+using Consyzer.Core.Models.Analysis;
 using static Consyzer.Constants.Output.Structure;
 
 namespace Consyzer.Output.Logging;

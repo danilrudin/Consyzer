@@ -1,5 +1,5 @@
 ﻿using Consyzer.Helpers;
-using Consyzer.Core.Models;
+using Consyzer.Core.Models.Resolution;
 
 namespace Consyzer.Core.Resolvers.Platform;
 
@@ -130,6 +130,7 @@ internal sealed class LinuxLibraryResolutionResolver(
             MechanismKind.EnvironmentOverride,
             heuristicCandidates,
             notSimulatedCaveats);
+
         return true;
     }
 
@@ -167,11 +168,15 @@ internal sealed class LinuxLibraryResolutionResolver(
 
     private static bool ContainsDynamicStringToken(string? path)
     {
+        const string originToken = "$ORIGIN";
+        const string libToken = "$LIB";
+        const string platformToken = "$PLATFORM";
+
         if (string.IsNullOrWhiteSpace(path)) return false;
 
-        return path.Contains("$ORIGIN", StringComparison.Ordinal)
-            || path.Contains("$LIB", StringComparison.Ordinal)
-            || path.Contains("$PLATFORM", StringComparison.Ordinal);
+        return path.Contains(originToken, StringComparison.Ordinal)
+            || path.Contains(libToken, StringComparison.Ordinal)
+            || path.Contains(platformToken, StringComparison.Ordinal);
     }
 
     private static List<string> CollectCandidatePaths(

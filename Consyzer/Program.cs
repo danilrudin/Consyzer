@@ -1,20 +1,12 @@
-﻿using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
-using NLog.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Consyzer;
+using Consyzer.Input;
 using Consyzer.Options;
-using Consyzer.Helpers;
-using Consyzer.Analyzers;
-using Consyzer.Core.Models;
-using Consyzer.Core.Classifiers;
-using Consyzer.Core.Caching;
-using Consyzer.Core.Extractors;
-using Consyzer.Core.Cryptography;
+using Consyzer.Application;
 using Consyzer.Output.Logging;
+using Consyzer.Core.Models.Exit;
 using Consyzer.DependencyInjection;
 using static Consyzer.Constants.Search;
 
@@ -27,46 +19,11 @@ var configuration = new ConfigurationBuilder()
 var rawOptions = configuration.Get<CommandLineOptions>()!;
 
 using var serviceProvider = new ServiceCollection()
-
-    // Options
-    .Configure<CommandLineOptions>(configuration)
-    .Configure<AppSettingsOptions>(configuration)
-
-    // Resources
-    .AddSingleton<IResourceCache<FileInfo, PEReader>, MetadataOnlyPEReaderCache>()
-
-    // Cryptography
-    .AddScoped<IFileHasher, Sha256FileHasher>()
-
-    // Logging
-    .AddLogging(builder =>
-    {
-        builder.ClearProviders();
-        builder.AddNLog();
-    })
-    .AddSingleton<IAnalysisLogBuilder, AnalysisLogBuilder>()
-
-    // Extractors
-    .AddScoped<IExtractor<FileInfo, IEnumerable<PInvokeMethod>>, PInvokeMethodExtractor>()
-    .AddScoped<IExtractor<MethodDefinition, MethodSignature>, MethodSignatureExtractor>()
-    .AddScoped<IExtractor<FileInfo, AssemblyMetadata>, AssemblyMetadataExtractor>()
-
-    // Classifiers
-    .AddScoped<IFileClassifier<AnalysisFileClassification>, EcmaFileClassifier>()
-
-    // Analyzers
-    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification>, FileClassificationAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>>, AssemblyMetadataAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>>, PInvokeMethodAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<PInvokeMethodGroup>, IReadOnlyList<LibraryResolutionResult>>, LibraryResolutionAnalyzer>()
-    .AddScoped<IAnalyzer<IEnumerable<LibraryResolutionResult>, AnalysisExitCode>, AnalysisExitCodeAnalyzer>()
-
-    // Reporting
-    .AddReportWriters(rawOptions.ReportFormats)
-    
-    // Orchestrator
-    .AddScoped<AnalysisOrchestrator>()
-
+    .AddConsyzerOptions(configuration)
+    .AddConsyzerLogging()
+    .AddConsyzerCore()
+    .AddConsyzerApplication()
+    .AddConsyzerOutput(rawOptions.ReportFormats)
     .BuildServiceProvider();
 
 using var scope = serviceProvider.CreateScope();
@@ -103,7 +60,7 @@ if (logger.IsEnabled(LogLevel.Debug))
 
 try
 {
-    var files = FileSearchHelper.GetFilesBySeparatedPatterns(
+    var files = AnalysisFileFinder.FindBySeparatedPatterns(
         options.AnalysisDirectory,
         options.SearchPatterns,
         PatternSeparator,

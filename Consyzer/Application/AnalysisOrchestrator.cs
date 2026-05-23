@@ -1,10 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
-using Consyzer.Analyzers;
-using Consyzer.Core.Models;
+using Consyzer.Application.Analyzers;
 using Consyzer.Output.Logging;
 using Consyzer.Output.Reporting;
+using Consyzer.Core.Models.Exit;
+using Consyzer.Core.Models.Analysis;
+using Consyzer.Core.Models.Metadata;
+using Consyzer.Core.Models.Resolution;
 
-namespace Consyzer;
+namespace Consyzer.Application;
 
 internal sealed class AnalysisOrchestrator(
     ILogger<AnalysisOrchestrator> logger,

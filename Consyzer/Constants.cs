@@ -1,6 +1,8 @@
 ﻿using Consyzer.Options;
 using Consyzer.Helpers;
-using Consyzer.Core.Models;
+using Consyzer.Core.Models.Analysis;
+using Consyzer.Core.Models.Resolution;
+using Consyzer.Core.Models.Metadata;
 
 namespace Consyzer;
 

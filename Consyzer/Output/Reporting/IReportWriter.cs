@@ -1,4 +1,4 @@
-﻿using Consyzer.Core.Models;
+﻿using Consyzer.Core.Models.Analysis;
 
 namespace Consyzer.Output.Reporting;
 

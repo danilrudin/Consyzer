@@ -1,23 +1,26 @@
 ﻿using Consyzer.Output.Reporting;
-using static Consyzer.Options.CommandLineOptions;
+using Consyzer.Options;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Consyzer.DependencyInjection;
 
 internal static partial class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddReportWriters(this IServiceCollection services, OutputFormats formats)
+    public static IServiceCollection AddReportWriters(
+        this IServiceCollection services,
+        CommandLineOptions.OutputFormats formats
+    )
     {
-        if (formats.HasFlag(OutputFormats.Console))
+        if (formats.HasFlag(CommandLineOptions.OutputFormats.Console))
             services.AddSingleton<IReportWriter, ConsoleReportWriter>();
 
-        if (formats.HasFlag(OutputFormats.Json))
+        if (formats.HasFlag(CommandLineOptions.OutputFormats.Json))
             services.AddSingleton<IReportWriter, JsonReportWriter>();
 
-        if (formats.HasFlag(OutputFormats.Csv))
+        if (formats.HasFlag(CommandLineOptions.OutputFormats.Csv))
             services.AddSingleton<IReportWriter, CsvReportWriter>();
 
-        if (formats.HasFlag(OutputFormats.Xml))
+        if (formats.HasFlag(CommandLineOptions.OutputFormats.Xml))
             services.AddSingleton<IReportWriter, XmlReportWriter>();
 
         return services;

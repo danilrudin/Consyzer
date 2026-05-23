@@ -1,7 +1,7 @@
 ﻿using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using Consyzer.Core.Models;
 using Consyzer.Core.Caching;
+using Consyzer.Core.Models.Analysis;
 
 namespace Consyzer.Core.Classifiers;
 
