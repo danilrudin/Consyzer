@@ -2,7 +2,7 @@
 using System.Reflection.Metadata;
 using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
-using static Consyzer.Tests.TestInfrastructure.Constants;
+using static Consyzer.Tests.TestSupport.Samples.TestFiles;
 
 namespace Consyzer.Tests.Core.Extractors;
 
@@ -12,7 +12,7 @@ public sealed class MetadataSignatureExtractorTest
     public void Extract_ShouldReturnSignature_WhenValidMethodProvided()
     {
         using var peAccessor = new MetadataOnlyPEReaderCache();
-        var mdReader = peAccessor.GetOrAdd(EcmaAssemblyWithPInvoke).GetMetadataReader();
+        var mdReader = peAccessor.GetOrAdd(AssemblyWithPInvoke).GetMetadataReader();
 
         var methodDef = mdReader.MethodDefinitions
             .Select(mdReader.GetMethodDefinition)

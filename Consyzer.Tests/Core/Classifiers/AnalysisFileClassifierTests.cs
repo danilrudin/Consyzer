@@ -1,7 +1,7 @@
 ﻿using Consyzer.Core.Caching;
 using Consyzer.Core.Classifiers;
-using static Consyzer.Tests.TestInfrastructure.Constants;
-using static Consyzer.Tests.TestInfrastructure.Helpers.MatchesHelper;
+using static Consyzer.Tests.TestSupport.Samples.TestFiles;
+using static Consyzer.Tests.TestSupport.Helpers.FileAssertionHelper;
 
 namespace Consyzer.Tests.Core.Classifiers;
 
@@ -15,8 +15,8 @@ public sealed class AnalysisFileClassifierTests
 
         var files = new[]
         {
-            EcmaAssemblyWithPInvoke,
-            NonEcmaAssembly
+            AssemblyWithPInvoke,
+            NonEcmaModule
         };
         
         var result = resolver.Classify(files);
@@ -26,7 +26,7 @@ public sealed class AnalysisFileClassifierTests
 
         Assert.Empty(result.NonEcmaAssemblies);
 
-        Assert.True(Matches(EcmaAssemblyWithPInvoke, result.EcmaAssemblies));
-        Assert.True(Matches(NonEcmaAssembly, result.NonEcmaModules));
+        ContainsPath(AssemblyWithPInvoke, result.EcmaAssemblies);
+        ContainsPath(NonEcmaModule, result.NonEcmaModules);
     }
 }

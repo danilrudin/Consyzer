@@ -1,5 +1,5 @@
 ﻿using Consyzer.Core.Caching;
-using static Consyzer.Tests.TestInfrastructure.Constants;
+using static Consyzer.Tests.TestSupport.Samples.TestFiles;
 
 namespace Consyzer.Tests.Core.Caching;
 
@@ -10,7 +10,7 @@ public sealed class MetadataOnlyPEReaderCacheTests
     {
         using var cache = new MetadataOnlyPEReaderCache();
 
-        var reader = cache.GetOrAdd(EcmaAssemblyWithPInvoke);
+        var reader = cache.GetOrAdd(AssemblyWithPInvoke);
 
         Assert.NotNull(reader);
         Assert.True(reader.HasMetadata);
@@ -21,8 +21,8 @@ public sealed class MetadataOnlyPEReaderCacheTests
     {
         using var cache = new MetadataOnlyPEReaderCache();
 
-        var reader1 = cache.GetOrAdd(EcmaAssemblyWithPInvoke);
-        var reader2 = cache.GetOrAdd(EcmaAssemblyWithPInvoke);
+        var reader1 = cache.GetOrAdd(AssemblyWithPInvoke);
+        var reader2 = cache.GetOrAdd(AssemblyWithPInvoke);
 
         Assert.Same(reader1, reader2);
     }
@@ -32,9 +32,9 @@ public sealed class MetadataOnlyPEReaderCacheTests
     {
         using var cache = new MetadataOnlyPEReaderCache();
 
-        var sameFile = new FileInfo(EcmaAssemblyWithPInvoke.FullName);
+        var sameFile = new FileInfo(AssemblyWithPInvoke.FullName);
 
-        var reader1 = cache.GetOrAdd(EcmaAssemblyWithPInvoke);
+        var reader1 = cache.GetOrAdd(AssemblyWithPInvoke);
         var reader2 = cache.GetOrAdd(sameFile);
 
         Assert.Same(reader1, reader2);
@@ -45,7 +45,7 @@ public sealed class MetadataOnlyPEReaderCacheTests
     {
         var cache = new MetadataOnlyPEReaderCache();
 
-        var reader = cache.GetOrAdd(EcmaAssemblyWithPInvoke);
+        var reader = cache.GetOrAdd(AssemblyWithPInvoke);
 
         cache.Dispose();
 

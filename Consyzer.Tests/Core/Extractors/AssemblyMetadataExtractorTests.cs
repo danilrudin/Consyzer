@@ -1,14 +1,14 @@
 ﻿using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
 using Consyzer.Core.Cryptography;
-using static Consyzer.Tests.TestInfrastructure.Constants;
-using static Consyzer.Tests.TestInfrastructure.Helpers.MatchesHelper;
+using static Consyzer.Tests.TestSupport.Samples.TestFiles;
+using static Consyzer.Tests.TestSupport.Helpers.FileAssertionHelper;
 
 namespace Consyzer.Tests.Core.Extractors;
 
 public sealed class AssemblyMetadataExtractorTests
 {
-    private const string SemVerRegex = @"^\d+\.\d+\.\d+(\.\d+)?$";
+    private const string SemanticVersionRegex = @"^\d+\.\d+\.\d+(\.\d+)?$";
 
     [Fact]
     public void Extract_ShouldReturnCorrectMetadata_WhenCalled()
@@ -18,11 +18,11 @@ public sealed class AssemblyMetadataExtractorTests
 
         var extractor = new AssemblyMetadataExtractor(hasher, peAccessor);
 
-        var metadata = extractor.Extract(EcmaAssemblyWithPInvoke);
+        var metadata = extractor.Extract(AssemblyWithPInvoke);
 
-        Assert.True(Matches(EcmaAssemblyWithPInvoke, metadata.File));
-        Assert.True(Matches(EcmaAssemblyWithPInvoke, metadata.CreationDateUtc));
+        EqualPath(AssemblyWithPInvoke, metadata.File);
+        EqualCreationTimeUtc(AssemblyWithPInvoke, metadata.CreationDateUtc);
         Assert.NotEmpty(metadata.Sha256);
-        Assert.Matches(SemVerRegex, metadata.Version);
+        Assert.Matches(SemanticVersionRegex, metadata.Version);
     }
 }

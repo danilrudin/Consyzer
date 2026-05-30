@@ -1,6 +1,6 @@
 ﻿using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
-using static Consyzer.Tests.TestInfrastructure.Constants;
+using static Consyzer.Tests.TestSupport.Samples.TestFiles;
 
 namespace Consyzer.Tests.Core.Extractors;
 
@@ -12,7 +12,7 @@ public sealed class PInvokeMethodExtractorTests
         using var peAccessor = new MetadataOnlyPEReaderCache();
         var extractor = new PInvokeMethodExtractor(peAccessor);
 
-        var methods = extractor.Extract(EcmaAssemblyWithPInvoke);
+        var methods = extractor.Extract(AssemblyWithPInvoke);
 
         Assert.NotEmpty(methods);
 
@@ -27,7 +27,7 @@ public sealed class PInvokeMethodExtractorTests
         using var peAccessor = new MetadataOnlyPEReaderCache();
         var extractor = new PInvokeMethodExtractor(peAccessor);
 
-        var result = extractor.Extract(EcmaAssemblyWithoutPInvoke);
+        var result = extractor.Extract(AssemblyWithoutPInvoke);
 
         Assert.Empty(result);
     }

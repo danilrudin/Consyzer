@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using Consyzer.Core.Cryptography;
-using static Consyzer.Tests.TestInfrastructure.Constants;
+using static Consyzer.Tests.TestSupport.Samples.TestFiles;
 
 namespace Consyzer.Tests.Core.Cryptography;
 
@@ -11,7 +11,7 @@ public sealed class Sha256FileHasherTests
     {
         var hasher = new Sha256FileHasher();
 
-        var hexHash = hasher.CalculateHash(EcmaAssemblyWithPInvoke);
+        var hexHash = hasher.CalculateHash(AssemblyWithPInvoke);
         var byteHash = Convert.FromHexString(hexHash);
 
         Assert.Equal(SHA256.HashSizeInBytes, byteHash.Length);
@@ -22,8 +22,8 @@ public sealed class Sha256FileHasherTests
     {
         var hasher = new Sha256FileHasher();
 
-        var hash1 = hasher.CalculateHash(EcmaAssemblyWithPInvoke);
-        var hash2 = hasher.CalculateHash(NonEcmaAssembly);
+        var hash1 = hasher.CalculateHash(AssemblyWithPInvoke);
+        var hash2 = hasher.CalculateHash(NonEcmaModule);
 
         Assert.NotEqual(hash1, hash2);
     }
