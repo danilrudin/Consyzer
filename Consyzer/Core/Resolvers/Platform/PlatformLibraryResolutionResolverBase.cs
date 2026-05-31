@@ -4,7 +4,8 @@ namespace Consyzer.Core.Resolvers.Platform;
 
 internal abstract class PlatformLibraryResolutionResolverBase
 {
-    public abstract LibraryResolutionResult Resolve(LibraryResolutionContext context);
+    public abstract string PlatformName { get; }
+    public abstract LibraryResolution Resolve(LibraryResolutionContext context);
 
     protected static bool TryGetExplicitPathCandidate(string path, out string? candidate)
     {
@@ -51,9 +52,8 @@ internal abstract class PlatformLibraryResolutionResolverBase
         }
     }
 
-    protected static LibraryResolutionResult CreateResolved(
+    protected static LibraryResolution CreateResolved(
         LibraryResolutionContext context,
-        string platform,
         string path,
         MechanismKind kind,
         IReadOnlyList<string>? heuristicCandidates = null,
@@ -63,39 +63,34 @@ internal abstract class PlatformLibraryResolutionResolverBase
         {
             TargetPath = context.TargetFile.FullName,
             LibraryName = context.LibraryName,
-            Platform = platform,
             ResolutionState = ResolutionState.Resolved,
             ResolvedPresence = new ResolvedPresence(path, kind),
             HeuristicCandidates = heuristicCandidates ?? [],
             NotSimulated = notSimulated
         };
 
-    protected static LibraryResolutionResult CreateMissing(
+    protected static LibraryResolution CreateMissing(
         LibraryResolutionContext context,
-        string platform,
         IReadOnlyList<string>? heuristicCandidates = null
     )
         => new()
         {
             TargetPath = context.TargetFile.FullName,
             LibraryName = context.LibraryName,
-            Platform = platform,
             ResolutionState = ResolutionState.Missing,
             ResolvedPresence = null,
             HeuristicCandidates = heuristicCandidates ?? [],
             NotSimulated = NotSimulatedMechanisms.None
         };
 
-    protected static LibraryResolutionResult CreateInconclusive(
+    protected static LibraryResolution CreateInconclusive(
         LibraryResolutionContext context,
-        string platform,
         NotSimulatedMechanisms notSimulated
     )
-        => CreateInconclusive(context, platform, [], notSimulated);
+        => CreateInconclusive(context, [], notSimulated);
 
-    protected static LibraryResolutionResult CreateInconclusive(
+    protected static LibraryResolution CreateInconclusive(
         LibraryResolutionContext context,
-        string platform,
         IReadOnlyList<string> heuristicCandidates,
         NotSimulatedMechanisms notSimulated
     )
@@ -103,7 +98,6 @@ internal abstract class PlatformLibraryResolutionResolverBase
         {
             TargetPath = context.TargetFile.FullName,
             LibraryName = context.LibraryName,
-            Platform = platform,
             ResolutionState = ResolutionState.Inconclusive,
             ResolvedPresence = null,
             HeuristicCandidates = heuristicCandidates,

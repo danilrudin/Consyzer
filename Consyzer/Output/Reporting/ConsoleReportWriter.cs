@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using Consyzer.Options;
 using Consyzer.Output.Builders;
 using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
-using static Consyzer.Output.AnalysisOutputStructure.Structure;
+using static Consyzer.Output.AnalysisOutputStructure;
 
 namespace Consyzer.Output.Reporting;
 
@@ -20,6 +20,7 @@ internal sealed class ConsoleReportWriter(
     {
         var builder = new IndentedTextBuilder(_options.IndentChars);
 
+        WriteAnalysisInfo(builder, outcome);
         WriteAssemblyMetadata(builder, outcome.AssemblyMetadataList);
         WritePInvokeGroups(builder, outcome.PInvokeMethodGroups);
         WriteLibraryResolutions(builder, outcome.LibraryResolutions);
@@ -28,6 +29,18 @@ internal sealed class ConsoleReportWriter(
         Console.Out.Write(builder.Build());
 
         return Destination;
+    }
+
+    private static void WriteAnalysisInfo(
+        IndentedTextBuilder builder,
+        AnalysisOutcome outcome
+    )
+    {
+        builder
+            .Title(Section.Bracketed.Analysis)
+            .PushIndent()
+            .Line(Label.Analysis.Platform, outcome.Platform)
+            .PopIndent();
     }
 
     private static void WriteAssemblyMetadata(
@@ -72,7 +85,7 @@ internal sealed class ConsoleReportWriter(
 
     private static void WriteLibraryResolutions(
         IndentedTextBuilder builder,
-        IEnumerable<LibraryResolutionResult> libraryResolutions
+        IEnumerable<LibraryResolution> libraryResolutions
     )
     {
         builder
@@ -82,10 +95,12 @@ internal sealed class ConsoleReportWriter(
             {
                 b.Line(Label.Library.TargetPath, libraryResolution.TargetPath);
                 b.Line(Label.Library.Name, libraryResolution.LibraryName);
-                b.Line(Label.Library.Platform, libraryResolution.Platform);
                 b.Line(Label.Library.ResolutionState, libraryResolution.ResolutionState);
                 b.Line(Label.Library.ResolvedPath, libraryResolution.ResolvedPresence?.Path ?? "null");
-                b.Line(Label.Library.MechanismKind, libraryResolution.ResolvedPresence?.MechanismKind.ToString() ?? "null");
+                b.Line(
+                    Label.Library.MechanismKind,
+                    libraryResolution.ResolvedPresence?.MechanismKind.ToString() ?? "null"
+                );
 
                 b.Line(
                     Label.Library.HeuristicCandidates,

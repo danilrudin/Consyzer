@@ -15,8 +15,8 @@ internal sealed class AnalysisOrchestrator(
     IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification> fileClassificationAnalyzer,
     IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>> metadataAnalyzer,
     IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>> pInvokeAnalyzer,
-    IAnalyzer<IEnumerable<PInvokeMethodGroup>, IReadOnlyList<LibraryResolutionResult>> libraryResolutionAnalyzer,
-    IAnalyzer<IEnumerable<LibraryResolutionResult>, AnalysisExitCode> exitCodeAnalyzer,
+    IAnalyzer<IEnumerable<PInvokeMethodGroup>, LibraryResolutionOutcome> libraryResolutionAnalyzer,
+    IAnalyzer<IEnumerable<LibraryResolution>, AnalysisExitCode> exitCodeAnalyzer,
     IEnumerable<IReportWriter> reportWriters
 )
 {
@@ -54,8 +54,9 @@ internal sealed class AnalysisOrchestrator(
         }
 
         logger.LogInformation("Analyzing native library resolution...");
-        var libraryResolutions = libraryResolutionAnalyzer.Analyze(pInvokeGroups).ToList();
-
+        var libraryResolutionAnalysis = libraryResolutionAnalyzer.Analyze(pInvokeGroups);
+        
+        var libraryResolutions = libraryResolutionAnalysis.Results;
         var summary = new AnalysisSummary
         {
             TotalFiles = files.Count,
@@ -69,6 +70,7 @@ internal sealed class AnalysisOrchestrator(
 
         var outcome = new AnalysisOutcome
         {
+            Platform = libraryResolutionAnalysis.Platform,
             AssemblyMetadataList = metadataList,
             PInvokeMethodGroups = pInvokeGroups,
             LibraryResolutions = libraryResolutions,

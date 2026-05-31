@@ -65,8 +65,8 @@ internal static partial class ServiceCollectionExtensions
         services.AddScoped<IAnalyzer<IEnumerable<FileInfo>, AnalysisFileClassification>, FileClassificationAnalyzer>();
         services.AddScoped<IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>>, AssemblyMetadataAnalyzer>();
         services.AddScoped<IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>>, PInvokeMethodAnalyzer>();
-        services.AddScoped<IAnalyzer<IEnumerable<PInvokeMethodGroup>, IReadOnlyList<LibraryResolutionResult>>, LibraryResolutionAnalyzer>();
-        services.AddScoped<IAnalyzer<IEnumerable<LibraryResolutionResult>, AnalysisExitCode>, AnalysisExitCodeAnalyzer>();
+        services.AddScoped<IAnalyzer<IEnumerable<PInvokeMethodGroup>, LibraryResolutionOutcome>, LibraryResolutionAnalyzer>();
+        services.AddScoped<IAnalyzer<IEnumerable<LibraryResolution>, AnalysisExitCode>, AnalysisExitCodeAnalyzer>();
 
         services.AddScoped<AnalysisOrchestrator>();
 

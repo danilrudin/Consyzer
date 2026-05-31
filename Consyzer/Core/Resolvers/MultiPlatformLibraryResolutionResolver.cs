@@ -16,5 +16,7 @@ internal sealed class MultiPlatformLibraryResolutionResolver(
         _ => throw new PlatformNotSupportedException()
     };
 
-    public LibraryResolutionResult Resolve(LibraryResolutionContext context) => _resolver.Resolve(context);
+    public string PlatformName => _resolver.PlatformName;
+
+    public LibraryResolution Resolve(LibraryResolutionContext context) => _resolver.Resolve(context);
 }

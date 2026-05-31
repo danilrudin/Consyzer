@@ -4,9 +4,9 @@ using Consyzer.Core.Models.Resolution;
 namespace Consyzer.Application.Analyzers;
 
 internal sealed class AnalysisExitCodeAnalyzer
-    : IAnalyzer<IEnumerable<LibraryResolutionResult>, AnalysisExitCode>
+    : IAnalyzer<IEnumerable<LibraryResolution>, AnalysisExitCode>
 {
-    public AnalysisExitCode Analyze(IEnumerable<LibraryResolutionResult> results)
+    public AnalysisExitCode Analyze(IEnumerable<LibraryResolution> results)
     {
         var hasMissing = false;
         var hasInconclusive = false;

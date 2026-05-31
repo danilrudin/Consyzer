@@ -7,11 +7,11 @@ internal sealed class LinuxLibraryResolutionResolver(
     string analyzedDirectory
 ) : PlatformLibraryResolutionResolverBase
 {
-    private const string PlatformName = "Linux";
     private const string LibraryExtension = ".so";
     private const string EnvironmentVariablePath = "LD_LIBRARY_PATH";
-
     private readonly string _analyzedDirectory = Path.GetFullPath(analyzedDirectory);
+
+    public override string PlatformName => "Linux";
 
     // Linux has a lot of mechanisms we can't simulate.
     private const NotSimulatedMechanisms NotSimulated =
@@ -36,7 +36,7 @@ internal sealed class LinuxLibraryResolutionResolver(
         "/usr/lib/arm-linux-gnueabihf"
     ];
 
-    public override LibraryResolutionResult Resolve(LibraryResolutionContext context)
+    public override LibraryResolution Resolve(LibraryResolutionContext context)
     {
         var candidates = GetLibraryNameCandidates(context.LibraryName);
         var heuristicCandidates = IsExplicitPath(candidates[0])
@@ -52,7 +52,7 @@ internal sealed class LinuxLibraryResolutionResolver(
         if (TryResolveLdLibraryPath(context, candidates, heuristicCandidates, ldLibraryPath, notSimulatedCaveats, out result)) return result;
         if (TryResolveDefaultSystemLocations(context, candidates, heuristicCandidates, notSimulatedCaveats, out result)) return result;
 
-        return CreateInconclusive(context, PlatformName, heuristicCandidates, NotSimulated | notSimulatedCaveats);
+        return CreateInconclusive(context, heuristicCandidates, NotSimulated | notSimulatedCaveats);
     }
 
     private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
@@ -87,7 +87,7 @@ internal sealed class LinuxLibraryResolutionResolver(
         LibraryResolutionContext context,
         string normalizedExplicitPath,
         IReadOnlyList<string> heuristicCandidates,
-        out LibraryResolutionResult result
+        out LibraryResolution result
     )
     {
         if (!TryGetExplicitPathCandidate(normalizedExplicitPath, out var candidate))
@@ -97,8 +97,8 @@ internal sealed class LinuxLibraryResolutionResolver(
         }
 
         result = candidate is not null
-            ? CreateResolved(context, PlatformName, candidate, MechanismKind.ExplicitPath, heuristicCandidates)
-            : CreateMissing(context, PlatformName, heuristicCandidates);
+            ? CreateResolved(context, candidate, MechanismKind.ExplicitPath, heuristicCandidates)
+            : CreateMissing(context, heuristicCandidates);
 
         return true;
     }
@@ -109,7 +109,7 @@ internal sealed class LinuxLibraryResolutionResolver(
         IReadOnlyList<string> heuristicCandidates,
         string? ldLibraryPath,
         NotSimulatedMechanisms notSimulatedCaveats,
-        out LibraryResolutionResult result
+        out LibraryResolution result
     )
     {
         var candidate = TryResolveInDirectories(
@@ -125,7 +125,6 @@ internal sealed class LinuxLibraryResolutionResolver(
 
         result = CreateResolved(
             context,
-            PlatformName,
             candidate,
             MechanismKind.EnvironmentOverride,
             heuristicCandidates,
@@ -139,7 +138,7 @@ internal sealed class LinuxLibraryResolutionResolver(
         IReadOnlyList<string> candidates,
         IReadOnlyList<string> heuristicCandidates,
         NotSimulatedMechanisms notSimulatedCaveats,
-        out LibraryResolutionResult result
+        out LibraryResolution result
     )
     {
         var candidate = TryResolveInDirectories(candidates, DefaultSystemLocations);
@@ -151,7 +150,6 @@ internal sealed class LinuxLibraryResolutionResolver(
 
         result = CreateResolved(
             context,
-            PlatformName,
             candidate,
             MechanismKind.DefaultSystemLocations,
             heuristicCandidates,

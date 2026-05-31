@@ -1,6 +1,6 @@
 ﻿namespace Consyzer.Core.Models.Resolution;
 
-internal sealed class LibraryResolutionResult
+internal sealed class LibraryResolution
 {
     /// <summary>
     /// Path to the managed binary where the native dependency was declared.
@@ -11,11 +11,6 @@ internal sealed class LibraryResolutionResult
     /// Native library name declared by the target binary.
     /// </summary>
     public required string LibraryName { get; init; }
-
-    /// <summary>
-    /// Platform whose native library loading rules were used for resolution.
-    /// </summary>
-    public required string Platform { get; init; }
 
     /// <summary>
     /// Final resolution state for the native dependency.

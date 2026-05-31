@@ -7,7 +7,6 @@ namespace Consyzer.Tests.Core.Resolvers.Platform;
 
 public sealed class WindowsLibraryResolutionResolverTests : IDisposable
 {
-    private const string PlatformName = "Windows";
     private const string PathVariableName = "PATH";
 
     private const string TestFileContent = "test file";
@@ -118,7 +117,6 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
 
         Assert.Equal(_targetFile.FullName, result.TargetPath);
         Assert.Equal(MissingLibraryName, result.LibraryName);
-        Assert.Equal(PlatformName, result.Platform);
         Assert.Equal(ResolutionState.Inconclusive, result.ResolutionState);
         Assert.Null(result.ResolvedPresence);
         Assert.Empty(result.HeuristicCandidates);
@@ -133,11 +131,11 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         _envPathDirectory.Dispose();
     }
 
-    private LibraryResolutionResult Resolve(WindowsLibraryResolutionResolver resolver, string libraryName)
+    private LibraryResolution Resolve(WindowsLibraryResolutionResolver resolver, string libraryName)
         => resolver.Resolve(new LibraryResolutionContext(_targetFile, libraryName));
 
     private void AssertResolved(
-        LibraryResolutionResult result,
+        LibraryResolution result,
         string libraryName,
         MechanismKind mechanismKind,
         string resolvedPath
@@ -145,7 +143,6 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
     {
         Assert.Equal(_targetFile.FullName, result.TargetPath);
         Assert.Equal(libraryName, result.LibraryName);
-        Assert.Equal(PlatformName, result.Platform);
         Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
         Assert.NotNull(result.ResolvedPresence);
         Assert.Equal(mechanismKind, result.ResolvedPresence!.MechanismKind);
