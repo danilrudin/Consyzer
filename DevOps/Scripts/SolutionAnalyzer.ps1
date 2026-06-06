@@ -31,73 +31,93 @@ $analysisFolders = Get-ChildItem -Path . -Recurse -Directory |
 
 if (-not $analysisFolders) {
 	Write-Warning "No build output folders found for analysis."
-	# Exit with -3 (NoFilesFound) to match Consyzer's exit codes,
-	# since no valid output folders (bin/<Configuration>) were found to analyze
-	Exit -3
+	Exit 3
 }
 
-$finalExitCode = -5
+$knownExitCodes = @(0, 1, 2, 3, 4)
+$exitCodes = @()
 $results = @()
 $index = 0
 
 foreach ($folder in $analysisFolders) {
-    Write-Output ("[{0}] Analyzing:`n`t{1}" -f $index, $folder)
-    Write-Output ""
+	Write-Output ("[{0}] Analyzing:`n`t{1}" -f $index, $folder)
+	Write-Output ""
 
-    & $ConsyzerPath `
-        --AnalysisDirectory $folder `
-        --SearchPatterns $SearchPatterns `
-        --RecursiveSearch $RecursiveSearch `
-        --ReportFormats $ReportFormats
+	& $ConsyzerPath `
+		--AnalysisDirectory $folder `
+		--SearchPatterns $SearchPatterns `
+		--RecursiveSearch $RecursiveSearch `
+		--ReportFormats $ReportFormats
 
-    if ($LASTEXITCODE -gt $finalExitCode) {
-        $finalExitCode = $LASTEXITCODE
-    }
+	$exitCode = $LASTEXITCODE
+	$effectiveExitCode = $exitCode
 
-    $message = switch ($LASTEXITCODE) {
-        -5 { "Error: No P/Invoke methods were found in the assemblies." }
-        -4 { "Error: No valid files were found for analysis." }
-        -3 { "Error: No files were found in the directory matching the search patterns." }
-        -2 { "Error: No file search patterns were specified." }
-        -1 { "Error: No analysis directory was specified." }
-        0 { "Success: All libraries were found in the analyzed directory." }
-        1 { "Warning: One or more libraries were found in the system directory." }
-        2 { "Warning: One or more libraries were found via the PATH environment variable." }
-        3 { "Warning: One or more libraries were found by absolute path." }
-        4 { "Warning: One or more libraries were found by relative path." }
-        5 { "Error: One or more libraries were not found in the system." }
-        default { "Error: unexpected exit code ($LASTEXITCODE)." }
-    }
+	if ($exitCode -notin $knownExitCodes) {
+		$effectiveExitCode = 4
+	}
 
-    $results += [PSCustomObject]@{
-        Index = $index
-        Path = $folder
-        ExitCode = $LASTEXITCODE
-        Message = $message
-    }
+	$exitCodes += $effectiveExitCode
 
-    Write-Output ""
-    $index++
+	$message = switch ($effectiveExitCode) {
+		0 { "Success: All libraries were found through supported search mechanisms." }
+		1 { "Error: One or more libraries are missing." }
+		2 { "Warning: One or more libraries were not found by checked mechanisms, but may be found by non-simulated OS loading mechanisms." }
+		3 { "Error: Input parameter error." }
+		4 {
+			if ($exitCode -in $knownExitCodes) {
+				"Error: Utility execution error."
+			}
+			else {
+				"Error: Unexpected Consyzer exit code ($exitCode)."
+			}
+		}
+	}
+
+	$results += [PSCustomObject]@{
+		Index = $index
+		Path = $folder
+		ExitCode = $exitCode
+		Message = $message
+	}
+
+	Write-Output ""
+	$index++
 }
 
 # Output analysis summary in YAML format for easier parsing in CI/CD pipelines
 Write-Output "AnalysisSummary:"
 
 foreach ($r in $results) {
-    if ($r.Message -match "^(Error|Warning|Success): (.+)$") {
-        $status = $matches[1]
-        $msg = $matches[2]
-    } else {
-        $status = "Unknown"
-        $msg = $r.Message
-    }
+	if ($r.Message -match "^(Error|Warning|Success): (.+)$") {
+		$status = $matches[1]
+		$msg = $matches[2]
+	} else {
+		$status = "Unknown"
+		$msg = $r.Message
+	}
 
-    Write-Output ("  - Index: {0}" -f $r.index)
-    Write-Output ("    ExitCode: {0}" -f $r.ExitCode)
-    Write-Output ("    Path: {0}" -f $r.Path)
-    Write-Output ("    Status: {0}" -f $status)
-    Write-Output ("    Message: {0}" -f $msg)
-    Write-Output ""
+	Write-Output ("  - Index: {0}" -f $r.index)
+	Write-Output ("    ExitCode: {0}" -f $r.ExitCode)
+	Write-Output ("    Path: {0}" -f $r.Path)
+	Write-Output ("    Status: {0}" -f $status)
+	Write-Output ("    Message: {0}" -f $msg)
+	Write-Output ""
+}
+
+if ($exitCodes -contains 4) {
+	$finalExitCode = 4
+}
+elseif ($exitCodes -contains 3) {
+	$finalExitCode = 3
+}
+elseif ($exitCodes -contains 1) {
+	$finalExitCode = 1
+}
+elseif ($exitCodes -contains 2) {
+	$finalExitCode = 2
+}
+else {
+	$finalExitCode = 0
 }
 
 Write-Output ("Final exit code: {0}" -f $finalExitCode)

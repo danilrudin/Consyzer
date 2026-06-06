@@ -1,5 +1,9 @@
 [![Build Status](https://github.com/danilrudin/Consyzer/workflows/Build/badge.svg)](https://github.com/danilrudin/Consyzer/actions/workflows/build.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=danilrudin_Consyzer&metric=coverage)](https://sonarcloud.io/summary/new_code?id=danilrudin_Consyzer) [![GitHub license](https://img.shields.io/github/license/danilrudin/Consyzer)](https://github.com/danilrudin/Consyzer/blob/master/LICENSE)
 
+This README is also available in the following languages:
+
+- [Русский](./Docs/README-RU.md)
+
 ## Overview
 
 **Consyzer** is a CLI utility created to prevent CIL module consistency issues when using P/Invoke mechanisms to call methods implemented outside the managed CLR environment.
@@ -55,21 +59,21 @@ At this time, Consyzer supports checking the presence of native libraries in the
 
 The result of checking the presence of each native library may have one of the following states:
 
-| State          | Analysis meaning                                                                                                                          |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `Resolved`     | The library was found through a supported search mechanism                                                                                 |
-| `Missing`      | The library was not found, and Consyzer does not know of unsupported mechanisms that could change the result                              |
-| `Inconclusive` | The library was not found, but the result cannot be considered final because Consyzer cannot simulate part of the OS mechanisms.          |
+| State          | Analysis meaning                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `Resolved`     | The library was found through a supported search mechanism                                                                       |
+| `Missing`      | The library was not found, and Consyzer does not know of unsupported mechanisms that could change the result                     |
+| `Inconclusive` | The library was not found, but the result cannot be considered final because Consyzer cannot simulate part of the OS mechanisms. |
 
 Consyzer also indicates the mechanism through which the presence of the library in the system was detected:
 
-| Mechanism                | Analysis meaning                                                       |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `ExplicitPath`           | The library was found at the path specified in its import              |
-| `ApplicationDirectory`   | The library was found in the directory of the analyzed application     |
-| `DefaultSystemLocations` | The library was found in standard OS directories                       |
-| `EnvironmentOverride`    | The library was found through an environment variable                  |
-| `CurrentDirectory`       | The library was found in the current working directory                 |
+| Mechanism                | Analysis meaning                                                   |
+| ------------------------ | ------------------------------------------------------------------ |
+| `ExplicitPath`           | The library was found at the path specified in its import          |
+| `ApplicationDirectory`   | The library was found in the directory of the analyzed application |
+| `DefaultSystemLocations` | The library was found in standard OS directories                   |
+| `EnvironmentOverride`    | The library was found through an environment variable              |
+| `CurrentDirectory`       | The library was found in the current working directory             |
 
 Some existing OS loading mechanisms are either not fully modeled and will be added in future versions, or will not be added at all because they cannot be reproduced by static analysis.
 For example, on Windows these may include `KnownDLLs`, `SxS`, DLL redirections, and process search directory settings,
@@ -168,13 +172,13 @@ The following report formats are supported:
 
 **Consyzer** returns a specific exit code depending on the final analysis state:
 
-| Code | Analysis meaning                                                                                                                        |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | All libraries were found through supported search mechanisms                                                                            |
-| 1    | One or more libraries are missing                                                                                                       |
-| 2    | One or more libraries were not found by checked mechanisms, but may be found by non-simulated OS loading mechanisms                     |
-| 3    | Input parameter error                                                                                                                   |
-| 4    | Utility execution error                                                                                                                 |
+| Code | Analysis meaning                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------------- |
+| 0    | All libraries were found through supported search mechanisms                                                        |
+| 1    | One or more libraries are missing                                                                                   |
+| 2    | One or more libraries were not found by checked mechanisms, but may be found by non-simulated OS loading mechanisms |
+| 3    | Input parameter error                                                                                               |
+| 4    | Utility execution error                                                                                             |
 
 > If there is at least one `Missing` among the results, code `1` is returned.  
 > If there is no `Missing`, but there is at least one `Inconclusive`, code `2` is returned.  
