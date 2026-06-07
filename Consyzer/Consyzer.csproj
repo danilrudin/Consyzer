@@ -41,4 +41,19 @@
 		</ContentWithTargetPath>
 	</ItemGroup>
 
+	<ItemGroup>
+		<SonarQubeSetting Include="sonar.coverage.exclusions">
+			<Value>
+				Program.cs,
+				DependencyInjection/**,
+				Options/**,
+				Helpers/**,
+				Application/**,
+				Output/**,
+				Core/Models/**,
+				Core/Extractors/Providers/StringSignatureTypeProvider.cs
+			</Value>
+		</SonarQubeSetting>
+	</ItemGroup>
+
 </Project>

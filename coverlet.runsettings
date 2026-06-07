@@ -8,7 +8,6 @@
 
           <ExcludeByFile>
             **/Program.cs,
-            **/Constants.cs,
             **/DependencyInjection/**,
             **/Options/**,
             **/Helpers/**,
