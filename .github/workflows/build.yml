@@ -60,17 +60,17 @@ jobs:
             /k:"danilrudin_Consyzer" `
             /o:"danilrudin" `
             /d:sonar.token="$env:SONAR_TOKEN" `
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+            /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
 
       - name: Build
         run: dotnet build --configuration Release
 
       - name: Unit Tests Executing
         run: >
-          dotnet test
-          --configuration Release
-          --collect:"XPlat Code Coverage"
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+            dotnet test
+            --configuration Release
+            --settings coverlet.runsettings
+            --collect:"XPlat Code Coverage"
 
       - name: End analyze
         shell: pwsh

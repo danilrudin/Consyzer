@@ -17,7 +17,7 @@
             **/Core/Models/**,
             **/Core/Extractors/Providers/StringSignatureTypeProvider.cs
           </ExcludeByFile>
-
+			<Exclude>[*.Tests]*</Exclude>
           <IncludeTestAssembly>false</IncludeTestAssembly>
         </Configuration>
       </DataCollector>
