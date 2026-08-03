@@ -54,7 +54,7 @@ internal sealed record ResolvedPresence(
 internal enum MechanismKind
 {
     ExplicitPath = 0,
-    ApplicationDirectory = 1,
+    AssemblyDirectory = 1,
     DefaultSystemLocations = 2,
     EnvironmentOverride = 3,
     PlatformSpecificMechanism = 4,
@@ -77,6 +77,7 @@ internal enum NotSimulatedMechanisms : ulong
     WindowsSafeSearchModeAndFlags = 1UL << 7,
     WindowsAppPathsRegistry = 1UL << 8,
     WindowsDotNetSearchPathOverrides = 1UL << 9,
+    WindowsProcessApplicationDirectory = 1UL << 10,
 
     // Linux (bit range 16..31)
     LinuxRPathRunPath = 1UL << 16,
@@ -87,6 +88,8 @@ internal enum NotSimulatedMechanisms : ulong
     LinuxMultiarchDefaultPaths = 1UL << 21,
     LinuxLdPreload = 1UL << 22,
     LinuxLdLibraryPathDynamicStringTokens = 1UL << 23,
+    LinuxDependencyDynamicStringTokens = 1UL << 24,
+    LinuxDotNetSearchPathOverrides = 1UL << 25,
 
     // macOS (bit range 32..47)
     MacOsAtRPathLoaderExecutablePath = 1UL << 32,

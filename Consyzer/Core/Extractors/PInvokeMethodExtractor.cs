@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
 using Consyzer.Core.Caching;
 using Consyzer.Core.Models.Metadata;
 
@@ -23,6 +24,12 @@ internal sealed class PInvokeMethodExtractor(
     )
     {
         var signatureExtractor = new MethodSignatureExtractor(mdReader);
+        var assemblyHasDllImportSearchPathOverride =
+            mdReader.IsAssembly
+            && HasAttribute<DefaultDllImportSearchPathsAttribute>(
+                mdReader,
+                mdReader.GetAssemblyDefinition().GetCustomAttributes()
+            );
 
         var methods = new List<PInvokeMethod>();
 
@@ -32,7 +39,12 @@ internal sealed class PInvokeMethodExtractor(
 
             if (!IsPInvokeMethod(definition)) continue;
 
-            methods.Add(ToPInvokeMethod(mdReader, definition, signatureExtractor));
+            methods.Add(ToPInvokeMethod(
+                mdReader,
+                definition,
+                signatureExtractor,
+                assemblyHasDllImportSearchPathOverride
+            ));
         }
 
         return methods;
@@ -46,7 +58,8 @@ internal sealed class PInvokeMethodExtractor(
     private static PInvokeMethod ToPInvokeMethod(
         MetadataReader mdReader,
         MethodDefinition methodDef,
-        MethodSignatureExtractor signatureExtractor
+        MethodSignatureExtractor signatureExtractor,
+        bool assemblyHasDllImportSearchPathOverride
     )
     {
         var import = methodDef.GetImport();
@@ -56,7 +69,53 @@ internal sealed class PInvokeMethodExtractor(
         {
             Signature = signatureExtractor.Extract(methodDef),
             ImportName = mdReader.GetString(module.Name),
-            ImportFlags = import.Attributes
+            ImportFlags = import.Attributes,
+            HasDllImportSearchPathOverride =
+                assemblyHasDllImportSearchPathOverride
+                || HasAttribute<DefaultDllImportSearchPathsAttribute>(
+                    mdReader,
+                    methodDef.GetCustomAttributes()
+                )
         };
+    }
+
+    private static bool HasAttribute<TAttribute>(
+        MetadataReader mdReader,
+        CustomAttributeHandleCollection attributes
+    )
+        where TAttribute : Attribute
+    {
+        var expectedType = typeof(TAttribute);
+
+        foreach (var handle in attributes)
+        {
+            var attribute = mdReader.GetCustomAttribute(handle);
+            if (attribute.Constructor.Kind != HandleKind.MemberReference)
+            {
+                continue;
+            }
+
+            var constructor = mdReader.GetMemberReference(
+                (MemberReferenceHandle)attribute.Constructor
+            );
+            if (constructor.Parent.Kind != HandleKind.TypeReference)
+            {
+                continue;
+            }
+
+            var attributeType = mdReader.GetTypeReference(
+                (TypeReferenceHandle)constructor.Parent
+            );
+            if (mdReader.StringComparer.Equals(attributeType.Name, expectedType.Name)
+                && mdReader.StringComparer.Equals(
+                    attributeType.Namespace,
+                    expectedType.Namespace!
+                ))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

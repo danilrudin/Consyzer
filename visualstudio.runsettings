@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="Code Coverage">
+        <Configuration>
+          <IncludeTestAssembly>False</IncludeTestAssembly>
+          <CodeCoverage>
+            <ModulePaths>
+              <Include>
+                <ModulePath>.*[\\/]Consyzer\.dll$</ModulePath>
+              </Include>
+            </ModulePaths>
+            <Sources>
+              <Exclude>
+                <Source>.*[\\/]Program\.cs$</Source>
+                <Source>.*[\\/]DependencyInjection[\\/].*</Source>
+                <Source>.*[\\/]Options[\\/].*</Source>
+                <Source>.*[\\/]Helpers[\\/].*</Source>
+                <Source>.*[\\/]Output[\\/].*</Source>
+                <Source>.*[\\/]Core[\\/]Models[\\/].*</Source>
+                <Source>.*[\\/]Core[\\/]Extractors[\\/]Providers[\\/]StringSignatureTypeProvider\.cs$</Source>
+              </Exclude>
+            </Sources>
+          </CodeCoverage>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

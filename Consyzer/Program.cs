@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Consyzer.Input;
 using Consyzer.Options;
 using Consyzer.Application;
@@ -15,22 +14,32 @@ var configuration = new ConfigurationBuilder()
     .AddCommandLine(args)
     .Build();
 
-var rawOptions = configuration.Get<CommandLineOptions>()!;
+CommandLineOptions options;
+
+try
+{
+    options = configuration.Get<CommandLineOptions>()
+        ?? throw new InvalidOperationException("Command-line options could not be bound.");
+}
+catch (InvalidOperationException exception)
+{
+    Console.Error.WriteLine($"Invalid command-line options: {exception.Message}");
+    return ExitStatus.InvalidInput(InvalidInputReason.InvalidOptionValue).ProcessExitCode;
+}
 
 using var serviceProvider = new ServiceCollection()
-    .AddConsyzerOptions(configuration)
-    .AddConsyzerLogging()
-    .AddConsyzerCore()
-    .AddConsyzerApplication()
-    .AddConsyzerOutput(rawOptions.ReportFormats)
+    .AddOptions(configuration, options)
+    .AddAnalysisLogging()
+    .AddCore()
+    .AddRequiredServices()
+    .AddReportWriters(options.ReportFormats)
     .BuildServiceProvider();
 
 using var scope = serviceProvider.CreateScope();
-var services = scope.ServiceProvider;
+var scopedServices = scope.ServiceProvider;
 
-var options = services.GetRequiredService<IOptions<CommandLineOptions>>().Value;
-var logger = services.GetRequiredService<ILogger<Program>>();
-var analysisLogBuilder = services.GetRequiredService<IAnalysisLogBuilder>();
+var logger = scopedServices.GetRequiredService<ILogger<Program>>();
+var analysisLogBuilder = scopedServices.GetRequiredService<IAnalysisLogBuilder>();
 
 if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
 {
@@ -50,6 +59,18 @@ if (string.IsNullOrWhiteSpace(options.SearchPatterns))
     );
 
     return ExitStatus.InvalidInput(InvalidInputReason.NoSearchPatterns).ProcessExitCode;
+}
+
+if (!Directory.Exists(options.AnalysisDirectory))
+{
+    logger.LogWarning(
+        "Analysis directory '{AnalysisDirectory}' does not exist.",
+        options.AnalysisDirectory
+    );
+
+    return ExitStatus.InvalidInput(
+        InvalidInputReason.AnalysisDirectoryNotFound
+    ).ProcessExitCode;
 }
 
 if (logger.IsEnabled(LogLevel.Debug))
@@ -74,7 +95,7 @@ try
         return ExitStatus.InvalidInput(InvalidInputReason.NoFilesFound).ProcessExitCode;
     }
 
-    var orchestrator = services.GetRequiredService<AnalysisOrchestrator>();
+    var orchestrator = scopedServices.GetRequiredService<AnalysisOrchestrator>();
 
     var status = orchestrator.Run(files);
 

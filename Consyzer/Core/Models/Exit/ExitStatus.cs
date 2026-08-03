@@ -32,5 +32,7 @@ internal enum InvalidInputReason
     NoAnalysisDirectory = -1,
     NoSearchPatterns = -2,
     NoFilesFound = -3,
-    AllFilesInvalid = -4
+    AllFilesInvalid = -4,
+    AnalysisDirectoryNotFound = -5,
+    InvalidOptionValue = -6
 }

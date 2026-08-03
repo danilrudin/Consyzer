@@ -2,7 +2,7 @@
 
 internal static class PlatformStringComparisonHelper
 {
-    public static StringComparer FilePathComparer =>
+    public static readonly StringComparer FilePathComparer =
         OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;

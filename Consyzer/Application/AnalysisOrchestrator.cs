@@ -16,7 +16,8 @@ internal sealed class AnalysisOrchestrator(
     IAnalyzer<IEnumerable<FileInfo>, IEnumerable<AssemblyMetadata>> metadataAnalyzer,
     IAnalyzer<IEnumerable<FileInfo>, IReadOnlyList<PInvokeMethodGroup>> pInvokeAnalyzer,
     IAnalyzer<IEnumerable<PInvokeMethodGroup>, LibraryResolutionOutcome> libraryResolutionAnalyzer,
-    IAnalyzer<IEnumerable<LibraryResolution>, AnalysisExitCode> exitCodeAnalyzer,
+    IAnalyzer<AnalysisOutcomeInput, AnalysisOutcome> outcomeAnalyzer,
+    IAnalyzer<IEnumerable<LibraryResolution>, ExitStatus> exitStatusAnalyzer,
     IEnumerable<IReportWriter> reportWriters
 )
 {
@@ -55,33 +56,21 @@ internal sealed class AnalysisOrchestrator(
 
         logger.LogInformation("Analyzing native library resolution...");
         var libraryResolutionAnalysis = libraryResolutionAnalyzer.Analyze(pInvokeGroups);
-        
-        var libraryResolutions = libraryResolutionAnalysis.Results;
-        var summary = new AnalysisSummary
-        {
-            TotalFiles = files.Count,
-            EcmaAssemblies = metadataList.Count,
-            AssembliesWithPInvoke = pInvokeGroups.Count,
-            TotalPInvokeMethods = pInvokeGroups.Sum(g => g.Methods.Count),
-            ResolvedLibraries = libraryResolutions.Count(r => r.ResolutionState == ResolutionState.Resolved),
-            MissingLibraries = libraryResolutions.Count(r => r.ResolutionState == ResolutionState.Missing),
-            InconclusiveLibraries = libraryResolutions.Count(r => r.ResolutionState == ResolutionState.Inconclusive)
-        };
-
-        var outcome = new AnalysisOutcome
-        {
-            Platform = libraryResolutionAnalysis.Platform,
-            AssemblyMetadataList = metadataList,
-            PInvokeMethodGroups = pInvokeGroups,
-            LibraryResolutions = libraryResolutions,
-            Summary = summary
-        };
+        var outcome = outcomeAnalyzer.Analyze(new AnalysisOutcomeInput(
+            files.Count,
+            metadataList,
+            pInvokeGroups,
+            libraryResolutionAnalysis
+        ));
 
         foreach (var writer in reportWriters)
         {
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("Generating report using {WriterType}...", writer.GetType().Name);
+                logger.LogInformation(
+                    "Generating report using {WriterType}...",
+                    writer.GetType().Name
+                );
             }
 
             var destination = writer.Write(outcome);
@@ -91,26 +80,19 @@ internal sealed class AnalysisOrchestrator(
             }
         }
 
-        var exitCode = exitCodeAnalyzer.Analyze(libraryResolutions);
+        var status = exitStatusAnalyzer.Analyze(outcome.LibraryResolutions);
 
-        var logLevel = GetExitCodeLogLevel(exitCode);
+        var logLevel = GetExitCodeLogLevel(status.Code);
         if (logger.IsEnabled(logLevel))
         {
             logger.Log(
                 logLevel,
                 "Analysis completed with exit code {ExitCode}.",
-                exitCode
+                status.Code
             );
         }
 
-        return exitCode switch
-        {
-            AnalysisExitCode.Success => ExitStatus.Success(),
-            AnalysisExitCode.Missing => ExitStatus.Missing(),
-            AnalysisExitCode.Inconclusive => ExitStatus.Inconclusive(),
-            AnalysisExitCode.ToolError => ExitStatus.ToolError(),
-            _ => throw new InvalidOperationException($"Unsupported analysis exit code '{exitCode}'.")
-        };
+        return status;
     }
 
     private static LogLevel GetExitCodeLogLevel(AnalysisExitCode exitCode) =>

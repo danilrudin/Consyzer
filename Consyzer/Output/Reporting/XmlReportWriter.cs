@@ -58,7 +58,7 @@ internal sealed class XmlReportWriter(
         foreach (var info in metadataList)
         {
             writer.WriteStartElement(ElementName.Assembly);
-            writer.WriteElementString(Label.Assembly.File, info.File.Name);
+            writer.WriteElementString(Label.Assembly.File, info.File.FullName);
             writer.WriteElementString(Label.Assembly.Version, info.Version);
             writer.WriteElementString(
                 Label.Assembly.CreationDateUtc,
@@ -78,12 +78,12 @@ internal sealed class XmlReportWriter(
         foreach (var group in groups)
         {
             writer.WriteStartElement(ElementName.Group);
-            writer.WriteAttributeString(Label.PInvoke.File, group.File.Name);
+            writer.WriteAttributeString(Label.PInvoke.File, group.File.FullName);
 
             foreach (var method in group.Methods)
             {
                 writer.WriteStartElement(ElementName.Method);
-                writer.WriteElementString(Label.PInvoke.Signature, method.Signature.ToString());
+                WriteMethodSignature(writer, method.Signature);
                 writer.WriteElementString(Label.PInvoke.ImportName, method.ImportName);
                 writer.WriteElementString(Label.PInvoke.ImportFlags, method.ImportFlags.ToString());
                 writer.WriteEndElement();
@@ -92,6 +92,28 @@ internal sealed class XmlReportWriter(
             writer.WriteEndElement();
         }
 
+        writer.WriteEndElement();
+    }
+
+    private static void WriteMethodSignature(
+        XmlWriter writer,
+        MethodSignature signature
+    )
+    {
+        writer.WriteStartElement(Label.PInvoke.Signature);
+        writer.WriteElementString(Label.PInvoke.ReturnType, signature.ReturnType);
+        writer.WriteElementString(Label.PInvoke.IsStatic, signature.IsStatic.ToString());
+        writer.WriteElementString(Label.PInvoke.Namespace, signature.Namespace);
+        writer.WriteElementString(Label.PInvoke.Class, signature.Class);
+        writer.WriteElementString(Label.PInvoke.Method, signature.Method);
+        writer.WriteStartElement(Label.PInvoke.MethodArguments);
+
+        foreach (var argument in signature.MethodArguments)
+        {
+            writer.WriteElementString(ElementName.MethodArgument, argument);
+        }
+
+        writer.WriteEndElement();
         writer.WriteEndElement();
     }
 
@@ -156,6 +178,7 @@ internal sealed class XmlReportWriter(
         public const string Assembly = nameof(Assembly);
         public const string Group = nameof(Group);
         public const string Method = nameof(Method);
+        public const string MethodArgument = nameof(MethodArgument);
         public const string Library = nameof(Library);
         public const string Candidate = nameof(Candidate);
     }

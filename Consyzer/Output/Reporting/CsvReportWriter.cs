@@ -58,7 +58,7 @@ internal sealed class CsvReportWriter(
         {
             builder.Record(
             [
-                SerializeValue(metadata.File.Name),
+                SerializeValue(metadata.File.FullName),
                 SerializeValue(metadata.Version),
                 SerializeValue(metadata.CreationDateUtc.ToString("O")),
                 SerializeValue(metadata.Sha256)
@@ -72,26 +72,37 @@ internal sealed class CsvReportWriter(
     {
         builder.Record([Section.Bracketed.PInvokeMethodGroups]);
 
-        var signatureProperties = typeof(MethodSignature).GetProperties();
         var signaturePrefix = nameof(PInvokeMethod.Signature);
 
-        var header = new List<string> { Label.PInvoke.File };
-        header.AddRange(signatureProperties.Select(p => $"{signaturePrefix}_{p.Name}"));
-        header.Add(Label.PInvoke.ImportName);
-        header.Add(Label.PInvoke.ImportFlags);
-
-        builder.Header(header);
+        builder.Header(
+        [
+            Label.PInvoke.File,
+            $"{signaturePrefix}_{Label.PInvoke.ReturnType}",
+            $"{signaturePrefix}_{Label.PInvoke.IsStatic}",
+            $"{signaturePrefix}_{Label.PInvoke.Namespace}",
+            $"{signaturePrefix}_{Label.PInvoke.Class}",
+            $"{signaturePrefix}_{Label.PInvoke.Method}",
+            $"{signaturePrefix}_{Label.PInvoke.MethodArguments}",
+            Label.PInvoke.ImportName,
+            Label.PInvoke.ImportFlags
+        ]);
 
         foreach (var group in groups)
         {
             foreach (var method in group.Methods)
             {
-                var record = new List<string> { SerializeValue(group.File.FullName) };
-                record.AddRange(signatureProperties.Select(p => SerializeValue(p.GetValue(method.Signature))));
-                record.Add(SerializeValue(method.ImportName));
-                record.Add(SerializeValue(method.ImportFlags.ToString()));
-
-                builder.Record(record);
+                builder.Record(
+                [
+                    SerializeValue(group.File.FullName),
+                    SerializeValue(method.Signature.ReturnType),
+                    SerializeValue(method.Signature.IsStatic),
+                    SerializeValue(method.Signature.Namespace),
+                    SerializeValue(method.Signature.Class),
+                    SerializeValue(method.Signature.Method),
+                    SerializeValue(method.Signature.MethodArguments),
+                    SerializeValue(method.ImportName),
+                    SerializeValue(method.ImportFlags.ToString())
+                ]);
             }
         }
 
@@ -163,7 +174,7 @@ internal sealed class CsvReportWriter(
 
     private string SerializeValue(object? value)
     {
-        if (value is IEnumerable<string> stringList && value is not string)
+        if (value is IEnumerable<string> stringList)
         {
             return EscapeList(stringList);
         }
@@ -174,7 +185,7 @@ internal sealed class CsvReportWriter(
     private string EscapeList(IEnumerable<string> items)
     {
         var innerDelimiter = GetSafeInnerDelimiter(_options.Delimiter);
-        var joined = string.Join(innerDelimiter, items.Select(item => item ?? string.Empty));
+        var joined = string.Join(innerDelimiter.ToString(), items);
 
         return EscapeValue(joined);
     }

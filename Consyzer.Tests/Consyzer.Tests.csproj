@@ -20,9 +20,4 @@
 	<ItemGroup>
 		<Using Include="Xunit" />
 	</ItemGroup>
-	
-	<PropertyGroup>
-		<SonarQubeExclude>true</SonarQubeExclude>
-	</PropertyGroup>
-
 </Project>

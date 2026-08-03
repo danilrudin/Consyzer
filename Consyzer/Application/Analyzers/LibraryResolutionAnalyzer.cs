@@ -1,5 +1,3 @@
-﻿using Microsoft.Extensions.Options;
-using Consyzer.Options;
 using Consyzer.Core.Resolvers;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
@@ -7,27 +5,33 @@ using Consyzer.Core.Models.Resolution;
 namespace Consyzer.Application.Analyzers;
 
 internal sealed class LibraryResolutionAnalyzer(
-    IOptions<CommandLineOptions> options
+    ILibraryResolutionResolver resolver
 ) : IAnalyzer<IEnumerable<PInvokeMethodGroup>, LibraryResolutionOutcome>
 {
-    private readonly MultiPlatformLibraryResolutionResolver _resolver = new(options.Value.AnalysisDirectory);
+    private static readonly StringComparer ImportNameComparer =
+        OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 
     public LibraryResolutionOutcome Analyze(IEnumerable<PInvokeMethodGroup> methodGroups)
     {
         var results = methodGroups
             .SelectMany(group => group.Methods
-                .Select(method => method.ImportName)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(libraryName => _resolver.Resolve(new LibraryResolutionContext(
+                .GroupBy(
+                    method => method.ImportName,
+                    ImportNameComparer
+                )
+                .Select(methods => resolver.Resolve(new LibraryResolutionContext(
                     group.File,
-                    libraryName
+                    methods.Key,
+                    methods.Any(method => method.HasDllImportSearchPathOverride)
                 )))
             )
             .ToList();
 
         return new LibraryResolutionOutcome
         {
-            Platform = _resolver.PlatformName,
+            Platform = resolver.PlatformName,
             Results = results
         };
     }

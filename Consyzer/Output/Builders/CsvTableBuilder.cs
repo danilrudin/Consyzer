@@ -2,32 +2,19 @@
 
 internal sealed class CsvTableBuilder(char delimiter)
 {
-    private readonly List<string> _lines = [];
+    private readonly System.Text.StringBuilder _builder = new();
 
     public CsvTableBuilder Header(IEnumerable<string> fields)
-    {
-        _lines.Add(string.Join(delimiter, fields));
-        return this;
-    }
+        => AppendRow(fields);
 
     public CsvTableBuilder Record(IEnumerable<string> fields)
+        => AppendRow(fields);
+
+    public string Build() => _builder.ToString();
+
+    private CsvTableBuilder AppendRow(IEnumerable<string> fields)
     {
-        _lines.Add(string.Join(delimiter, fields));
+        _builder.AppendJoin(delimiter, fields).AppendLine();
         return this;
     }
-
-    public CsvTableBuilder Records<T>(IEnumerable<T> items, Func<object?, string> serializer)
-    {
-        var props = typeof(T).GetProperties();
-        Header(props.Select(p => p.Name));
-
-        foreach (var item in items)
-        {
-            Record(props.Select(p => serializer(p.GetValue(item))));
-        }
-
-        return this;
-    }
-
-    public string Build() => string.Join(Environment.NewLine, _lines) + Environment.NewLine;
 }

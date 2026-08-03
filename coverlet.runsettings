@@ -5,18 +5,16 @@
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
           <Format>opencover</Format>
-
           <ExcludeByFile>
             **/Program.cs,
             **/DependencyInjection/**,
             **/Options/**,
             **/Helpers/**,
-            **/Application/**,
             **/Output/**,
             **/Core/Models/**,
             **/Core/Extractors/Providers/StringSignatureTypeProvider.cs
           </ExcludeByFile>
-			<Exclude>[*.Tests]*</Exclude>
+          <Exclude>[*.Tests]*</Exclude>
           <IncludeTestAssembly>false</IncludeTestAssembly>
         </Configuration>
       </DataCollector>

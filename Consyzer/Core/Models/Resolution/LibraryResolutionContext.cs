@@ -2,5 +2,6 @@ namespace Consyzer.Core.Models.Resolution;
 
 internal sealed record LibraryResolutionContext(
     FileInfo TargetFile,
-    string LibraryName
+    string LibraryName,
+    bool HasDllImportSearchPathOverride = false
 );

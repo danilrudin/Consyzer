@@ -4,11 +4,10 @@ using Consyzer.Core.Models.Resolution;
 namespace Consyzer.Application.Analyzers;
 
 internal sealed class AnalysisExitCodeAnalyzer
-    : IAnalyzer<IEnumerable<LibraryResolution>, AnalysisExitCode>
+    : IAnalyzer<IEnumerable<LibraryResolution>, ExitStatus>
 {
-    public AnalysisExitCode Analyze(IEnumerable<LibraryResolution> results)
+    public ExitStatus Analyze(IEnumerable<LibraryResolution> results)
     {
-        var hasMissing = false;
         var hasInconclusive = false;
 
         foreach (var result in results)
@@ -16,8 +15,7 @@ internal sealed class AnalysisExitCodeAnalyzer
             switch (result.ResolutionState)
             {
                 case ResolutionState.Missing:
-                    hasMissing = true;
-                    break;
+                    return ExitStatus.Missing();
 
                 case ResolutionState.Inconclusive:
                     hasInconclusive = true;
@@ -25,9 +23,8 @@ internal sealed class AnalysisExitCodeAnalyzer
             }
         }
 
-        if (hasMissing) return AnalysisExitCode.Missing;
-        if (hasInconclusive) return AnalysisExitCode.Inconclusive;
+        if (hasInconclusive) return ExitStatus.Inconclusive();
 
-        return AnalysisExitCode.Success;
+        return ExitStatus.Success();
     }
 }

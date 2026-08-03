@@ -11,3 +11,10 @@ internal sealed class AnalysisOutcome
     public required IReadOnlyList<LibraryResolution> LibraryResolutions { get; init; }
     public required AnalysisSummary Summary { get; init; }
 }
+
+internal sealed record AnalysisOutcomeInput(
+    int TotalFiles,
+    IReadOnlyList<AssemblyMetadata> AssemblyMetadataList,
+    IReadOnlyList<PInvokeMethodGroup> PInvokeMethodGroups,
+    LibraryResolutionOutcome LibraryResolution
+);

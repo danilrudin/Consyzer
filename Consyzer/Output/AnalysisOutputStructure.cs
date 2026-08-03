@@ -46,6 +46,12 @@ internal static class AnalysisOutputStructure
         {
             public const string File = nameof(PInvokeMethodGroup.File);
             public const string Signature = nameof(PInvokeMethod.Signature);
+            public const string ReturnType = nameof(MethodSignature.ReturnType);
+            public const string IsStatic = nameof(MethodSignature.IsStatic);
+            public const string Namespace = nameof(MethodSignature.Namespace);
+            public const string Class = nameof(MethodSignature.Class);
+            public const string Method = nameof(MethodSignature.Method);
+            public const string MethodArguments = nameof(MethodSignature.MethodArguments);
             public const string ImportName = nameof(PInvokeMethod.ImportName);
             public const string ImportFlags = nameof(PInvokeMethod.ImportFlags);
         }

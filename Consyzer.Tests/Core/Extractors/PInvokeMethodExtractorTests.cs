@@ -12,13 +12,25 @@ public sealed class PInvokeMethodExtractorTests
         using var peAccessor = new MetadataOnlyPEReaderCache();
         var extractor = new PInvokeMethodExtractor(peAccessor);
 
-        var methods = extractor.Extract(AssemblyWithPInvoke);
+        var methods = extractor.Extract(AssemblyWithPInvoke).ToList();
 
         Assert.NotEmpty(methods);
 
-        var method = methods.First();
-        Assert.False(string.IsNullOrWhiteSpace(method.Signature.GetMethodLocation()));
-        Assert.False(string.IsNullOrWhiteSpace(method.ImportName));
+        Assert.All(methods, method =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(method.Signature.GetMethodLocation()));
+            Assert.False(string.IsNullOrWhiteSpace(method.ImportName));
+        });
+
+        var defaultMethod = Assert.Single(methods, method =>
+            method.ImportName == "consyzer-test-native-library"
+        );
+        var searchPathMethod = Assert.Single(methods, method =>
+            method.ImportName == "consyzer-test-search-path-native-library"
+        );
+
+        Assert.False(defaultMethod.HasDllImportSearchPathOverride);
+        Assert.True(searchPathMethod.HasDllImportSearchPathOverride);
     }
 
     [Fact]

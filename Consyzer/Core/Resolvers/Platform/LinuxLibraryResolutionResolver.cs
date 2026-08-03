@@ -1,189 +1,241 @@
-﻿using Consyzer.Helpers;
+﻿using System.Runtime.InteropServices;
 using Consyzer.Core.Models.Resolution;
 
 namespace Consyzer.Core.Resolvers.Platform;
 
 internal sealed class LinuxLibraryResolutionResolver(
-    string analyzedDirectory
+    string analysisDirectory
 ) : PlatformLibraryResolutionResolverBase
 {
     private const string LibraryExtension = ".so";
     private const string EnvironmentVariablePath = "LD_LIBRARY_PATH";
-    private readonly string _analyzedDirectory = Path.GetFullPath(analyzedDirectory);
+    private readonly string _analysisDirectory = Path.GetFullPath(analysisDirectory);
 
     public override string PlatformName => "Linux";
 
-    // Linux has a lot of mechanisms we can't simulate.
+    // Linux has loader mechanisms that can't be reproduced reliably by static probing.
     private const NotSimulatedMechanisms NotSimulated =
         NotSimulatedMechanisms.LinuxRPathRunPath
         | NotSimulatedMechanisms.LinuxLdSoCache
         | NotSimulatedMechanisms.LinuxLdSoConf
         | NotSimulatedMechanisms.LinuxSecureExecution
         | NotSimulatedMechanisms.LinuxTransitiveDependencies
-        | NotSimulatedMechanisms.LinuxLdPreload;
+        | NotSimulatedMechanisms.LinuxMultiarchDefaultPaths
+        | NotSimulatedMechanisms.LinuxLdPreload
+        | NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides;
 
-    private static readonly string[] DefaultSystemLocations =
+    private static readonly IReadOnlyList<string> DefaultSystemLocations =
+        CreateDefaultSystemLocations();
+    private static readonly string[] DynamicStringTokens =
     [
-        "/lib",
-        "/usr/lib",
-        "/lib64",
-        "/usr/lib64",
-        "/lib/x86_64-linux-gnu",
-        "/usr/lib/x86_64-linux-gnu",
-        "/lib/aarch64-linux-gnu",
-        "/usr/lib/aarch64-linux-gnu",
-        "/lib/arm-linux-gnueabihf",
-        "/usr/lib/arm-linux-gnueabihf"
+        "$ORIGIN",
+        "${ORIGIN}",
+        "$LIB",
+        "${LIB}",
+        "$PLATFORM",
+        "${PLATFORM}"
     ];
 
     public override LibraryResolution Resolve(LibraryResolutionContext context)
     {
         var candidates = GetLibraryNameCandidates(context.LibraryName);
-        var heuristicCandidates = IsExplicitPath(candidates[0])
+        var heuristicCandidates = IsExplicitPath(context.LibraryName)
             ? []
-            : CollectHeuristicCandidates(candidates);
+            : CollectHeuristicCandidates(
+                context,
+                candidates,
+                _analysisDirectory,
+                StringComparer.Ordinal
+            );
+
+        if (ContainsDynamicStringToken(context.LibraryName))
+        {
+            return CreateInconclusive(
+                context,
+                heuristicCandidates,
+                NotSimulatedMechanisms.LinuxDependencyDynamicStringTokens
+            );
+        }
+
+        if (TryResolveExplicit(
+            context,
+            context.LibraryName,
+            candidates,
+            heuristicCandidates,
+            out var result
+        ))
+        {
+            if (context.HasDllImportSearchPathOverride
+                && result.ResolutionState == ResolutionState.Resolved
+                && !Path.IsPathRooted(context.LibraryName))
+            {
+                return CreateInconclusive(
+                    context,
+                    heuristicCandidates,
+                    NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides
+                );
+            }
+
+            return result;
+        }
 
         var ldLibraryPath = Environment.GetEnvironmentVariable(EnvironmentVariablePath);
         var notSimulatedCaveats = ContainsDynamicStringToken(ldLibraryPath)
             ? NotSimulatedMechanisms.LinuxLdLibraryPathDynamicStringTokens
             : NotSimulatedMechanisms.None;
 
-        if (TryResolveExplicit(context, candidates[0], heuristicCandidates, out var result)) return result;
-        if (TryResolveLdLibraryPath(context, candidates, heuristicCandidates, ldLibraryPath, notSimulatedCaveats, out result)) return result;
-        if (TryResolveDefaultSystemLocations(context, candidates, heuristicCandidates, notSimulatedCaveats, out result)) return result;
+        if (context.HasDllImportSearchPathOverride)
+        {
+            return CreateInconclusive(
+                context,
+                heuristicCandidates,
+                NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides
+                | notSimulatedCaveats
+            );
+        }
 
-        return CreateInconclusive(context, heuristicCandidates, NotSimulated | notSimulatedCaveats);
+        var ldLibraryPathDirectories = SplitSearchPath(
+                ldLibraryPath,
+                true,
+                false,
+                ':'
+            )
+            .Where(path => !ContainsDynamicStringToken(path))
+            .ToArray();
+
+        foreach (var candidate in candidates)
+        {
+            if (TryResolveAssemblyDirectory(
+                context,
+                candidate,
+                heuristicCandidates,
+                out result
+            ))
+            {
+                return result;
+            }
+
+            if (TryResolveInDirectories(
+                context,
+                candidate,
+                ldLibraryPathDirectories,
+                MechanismKind.EnvironmentOverride,
+                heuristicCandidates,
+                out result,
+                notSimulatedCaveats
+            ))
+            {
+                return result;
+            }
+
+            if (TryResolveInDirectories(
+                context,
+                candidate,
+                DefaultSystemLocations,
+                MechanismKind.DefaultSystemLocations,
+                heuristicCandidates,
+                out result,
+                notSimulatedCaveats
+            ))
+            {
+                return result;
+            }
+        }
+
+        return CreateInconclusive(
+            context,
+            heuristicCandidates,
+            NotSimulated | notSimulatedCaveats
+        );
     }
 
     private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
     {
-        if (IsExplicitPath(input))
+        if (Path.IsPathRooted(input))
         {
             return [input];
         }
 
+        var addLibPrefix = !IsExplicitPath(input);
+        var candidates = new List<string>(4);
+
         if (EndsWithSharedObjectName(input))
         {
-            return DistinctCandidates([input, WithLibPrefix(input)], StringComparer.Ordinal);
+            var withCanonicalExtension = input + LibraryExtension;
+
+            candidates.Add(input);
+            if (addLibPrefix) candidates.Add(WithLibPrefix(input));
+            candidates.Add(withCanonicalExtension);
+            if (addLibPrefix) candidates.Add(WithLibPrefix(withCanonicalExtension));
+
+            return DistinctCandidates(candidates, StringComparer.Ordinal);
         }
 
         var canonical = input + LibraryExtension;
 
-        return DistinctCandidates(
-        [
-            canonical,
-            WithLibPrefix(canonical),
-            input,
-            WithLibPrefix(input)
-        ], StringComparer.Ordinal);
+        candidates.Add(canonical);
+        if (addLibPrefix) candidates.Add(WithLibPrefix(canonical));
+        candidates.Add(input);
+        if (addLibPrefix) candidates.Add(WithLibPrefix(input));
+
+        return DistinctCandidates(candidates, StringComparer.Ordinal);
     }
 
-    private List<string> CollectHeuristicCandidates(IReadOnlyList<string> candidates)
+    private static IReadOnlyList<string> CreateDefaultSystemLocations()
     {
-        return CollectCandidatePaths(candidates, _analyzedDirectory, Directory.GetCurrentDirectory());
-    }
-
-    private static bool TryResolveExplicit(
-        LibraryResolutionContext context,
-        string normalizedExplicitPath,
-        IReadOnlyList<string> heuristicCandidates,
-        out LibraryResolution result
-    )
-    {
-        if (!TryGetExplicitPathCandidate(normalizedExplicitPath, out var candidate))
+        var directories = new List<string>
         {
-            result = default!;
-            return false;
-        }
+            "/lib",
+            "/usr/lib",
+            "/lib64",
+            "/usr/lib64"
+        };
 
-        result = candidate is not null
-            ? CreateResolved(context, candidate, MechanismKind.ExplicitPath, heuristicCandidates)
-            : CreateMissing(context, heuristicCandidates);
-
-        return true;
-    }
-
-    private static bool TryResolveLdLibraryPath(
-        LibraryResolutionContext context,
-        IReadOnlyList<string> candidates,
-        IReadOnlyList<string> heuristicCandidates,
-        string? ldLibraryPath,
-        NotSimulatedMechanisms notSimulatedCaveats,
-        out LibraryResolution result
-    )
-    {
-        var candidate = TryResolveInDirectories(
-            candidates,
-            SplitSearchPath(ldLibraryPath, emptySegmentMeansCurrentDirectory: true)
-        );
-
-        if (candidate is null)
+        string[] multiarchDirectories = RuntimeInformation.ProcessArchitecture switch
         {
-            result = default!;
-            return false;
-        }
+            Architecture.X64 =>
+            [
+                "/lib/x86_64-linux-gnu",
+                "/usr/lib/x86_64-linux-gnu"
+            ],
+            Architecture.X86 =>
+            [
+                "/lib/i386-linux-gnu",
+                "/usr/lib/i386-linux-gnu"
+            ],
+            Architecture.Arm64 =>
+            [
+                "/lib/aarch64-linux-gnu",
+                "/usr/lib/aarch64-linux-gnu"
+            ],
+            Architecture.Arm =>
+            [
+                "/lib/arm-linux-gnueabihf",
+                "/usr/lib/arm-linux-gnueabihf"
+            ],
+            _ => []
+        };
 
-        result = CreateResolved(
-            context,
-            candidate,
-            MechanismKind.EnvironmentOverride,
-            heuristicCandidates,
-            notSimulatedCaveats);
+        directories.AddRange(multiarchDirectories);
 
-        return true;
-    }
-
-    private static bool TryResolveDefaultSystemLocations(
-        LibraryResolutionContext context,
-        IReadOnlyList<string> candidates,
-        IReadOnlyList<string> heuristicCandidates,
-        NotSimulatedMechanisms notSimulatedCaveats,
-        out LibraryResolution result
-    )
-    {
-        var candidate = TryResolveInDirectories(candidates, DefaultSystemLocations);
-        if (candidate is null)
-        {
-            result = default!;
-            return false;
-        }
-
-        result = CreateResolved(
-            context,
-            candidate,
-            MechanismKind.DefaultSystemLocations,
-            heuristicCandidates,
-            notSimulatedCaveats);
-        return true;
+        return directories;
     }
 
     private static bool EndsWithSharedObjectName(string input)
         => input.EndsWith(LibraryExtension, StringComparison.Ordinal)
         || input.Contains(LibraryExtension + ".", StringComparison.Ordinal);
 
-    private static string WithLibPrefix(string input)
-        => input.StartsWith("lib", StringComparison.Ordinal) ? input : "lib" + input;
+    private static string WithLibPrefix(string input) => "lib" + input;
 
     private static bool ContainsDynamicStringToken(string? path)
     {
-        const string originToken = "$ORIGIN";
-        const string libToken = "$LIB";
-        const string platformToken = "$PLATFORM";
+        if (path is null) return false;
 
-        if (string.IsNullOrWhiteSpace(path)) return false;
+        foreach (var token in DynamicStringTokens)
+        {
+            if (path.Contains(token, StringComparison.Ordinal)) return true;
+        }
 
-        return path.Contains(originToken, StringComparison.Ordinal)
-            || path.Contains(libToken, StringComparison.Ordinal)
-            || path.Contains(platformToken, StringComparison.Ordinal);
-    }
-
-    private static List<string> CollectCandidatePaths(
-        IReadOnlyList<string> fileNames,
-        params string?[] directories
-    )
-    {
-        var seen = new HashSet<string>(PlatformStringComparisonHelper.FilePathComparer);
-
-        return [.. EnumerateExistingCandidatePaths(fileNames, directories).Where(seen.Add)];
+        return false;
     }
 }

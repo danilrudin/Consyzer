@@ -17,6 +17,5 @@ internal sealed class MultiPlatformLibraryResolutionResolver(
     };
 
     public string PlatformName => _resolver.PlatformName;
-
     public LibraryResolution Resolve(LibraryResolutionContext context) => _resolver.Resolve(context);
 }

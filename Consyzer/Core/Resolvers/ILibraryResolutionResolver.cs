@@ -4,6 +4,6 @@ namespace Consyzer.Core.Resolvers;
 
 internal interface ILibraryResolutionResolver
 {
-    string PlatformName { get;  }
+    string PlatformName { get; }
     LibraryResolution Resolve(LibraryResolutionContext context);
 }

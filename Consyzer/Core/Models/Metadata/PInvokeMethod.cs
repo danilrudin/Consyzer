@@ -13,4 +13,5 @@ internal sealed class PInvokeMethod
     public required MethodSignature Signature { get; init; }
     public required string ImportName { get; init; }
     public required MethodImportAttributes ImportFlags { get; init; }
+    internal bool HasDllImportSearchPathOverride { get; init; }
 }

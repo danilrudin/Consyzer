@@ -1,4 +1,6 @@
-﻿namespace Consyzer.Input;
+﻿using Consyzer.Helpers;
+
+namespace Consyzer.Input;
 
 internal static class AnalysisFileFinder
 {
@@ -14,7 +16,8 @@ internal static class AnalysisFileFinder
                 separator,
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
             )
-            .SelectMany(p => FindByPattern(directory, p, isRecursive));
+            .SelectMany(pattern => FindByPattern(directory, pattern, isRecursive))
+            .DistinctBy(file => file.FullName, PlatformStringComparisonHelper.FilePathComparer);
     }
 
     public static IEnumerable<FileInfo> FindByPattern(

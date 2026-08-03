@@ -70,10 +70,10 @@ Consyzer also indicates the mechanism through which the presence of the library 
 | Mechanism                | Analysis meaning                                                   |
 | ------------------------ | ------------------------------------------------------------------ |
 | `ExplicitPath`           | The library was found at the path specified in its import          |
-| `ApplicationDirectory`   | The library was found in the directory of the analyzed application |
+| `AssemblyDirectory`      | The library was found next to the assembly declaring the P/Invoke |
 | `DefaultSystemLocations` | The library was found in standard OS directories                   |
 | `EnvironmentOverride`    | The library was found through an environment variable              |
-| `CurrentDirectory`       | The library was found in the current working directory             |
+| `CurrentDirectory`       | The library was found in the current working directory (Windows)   |
 
 Some existing OS loading mechanisms are either not fully modeled and will be added in future versions, or will not be added at all because they cannot be reproduced by static analysis.
 For example, on Windows these may include `KnownDLLs`, `SxS`, DLL redirections, and process search directory settings,
@@ -82,12 +82,12 @@ and on Linux — `RPATH`, `RUNPATH`, `ld.so.cache`, `ld.so.conf`, and other secu
 If the library was not found, but there are non-simulated mechanisms capable of affecting the result,
 Consyzer will register such a library as `Inconclusive` instead of presenting an assumption as a guaranteed result.
 
-Consyzer may also show heuristic matches — for example, a library next to the analyzed file.
+Consyzer may also show heuristic matches — for example, a library in the analysis root that is not next to a nested target assembly.
 Such matches are also registered separately and do not turn the strict check result into a successful one.
 
 ## Analysis Results
 
-**Consyzer** presents analysis results in the form of reports.  
+**Consyzer** presents analysis results in the form of reports.
 The following report formats are supported:
 
 1. `Console`
@@ -180,8 +180,8 @@ The following report formats are supported:
 | 3    | Input parameter error                                                                                               |
 | 4    | Utility execution error                                                                                             |
 
-> If there is at least one `Missing` among the results, code `1` is returned.  
-> If there is no `Missing`, but there is at least one `Inconclusive`, code `2` is returned.  
+> If there is at least one `Missing` among the results, code `1` is returned.
+> If there is no `Missing`, but there is at least one `Inconclusive`, code `2` is returned.
 > Code `0` is returned only when all found P/Invoke dependencies have the `Resolved` state.
 
 ### Usage
@@ -198,17 +198,29 @@ You can also specify two optional parameters:
 
 ### General usage pattern
 
+Windows:
+
+```powershell
+Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--ReportFormats Console,Json,Csv,Xml]
 ```
-Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--ReportFormats Console, Json, Csv, Xml]
+
+Linux:
+
+```bash
+./Consyzer --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--ReportFormats Console,Json,Csv,Xml]
 ```
 
 ### Example
 
+```powershell
+Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll,*.exe" --RecursiveSearch true --ReportFormats Console,Json
 ```
-Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll, *.exe" --RecursiveSearch true --ReportFormats Console, Json
+
+```bash
+./Consyzer --AnalysisDirectory ./modules --SearchPatterns "*.dll,*.exe" --RecursiveSearch true --ReportFormats Console,Json
 ```
 
 ## Analyzing multiple projects in a solution
 
-You can use [this](./DevOps/Scripts/SolutionAnalyzer.ps1) PowerShell script to analyze the output artifacts of all projects in a solution.  
+You can use [this](./DevOps/Scripts/SolutionAnalyzer.ps1) PowerShell script to analyze the output artifacts of all projects in a solution.
 This script can also be used in a **CI/CD pipeline**.
