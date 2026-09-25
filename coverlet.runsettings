@@ -11,6 +11,10 @@
             **/Options/**,
             **/Helpers/**,
             **/Output/**,
+            **/Application/AnalysisOrchestrator.cs,
+            **/Application/Analyzers/AssemblyMetadataAnalyzer.cs,
+            **/Application/Analyzers/FileClassificationAnalyzer.cs,
+            **/Application/Analyzers/PInvokeMethodAnalyzer.cs,
             **/Core/Models/**,
             **/Core/Extractors/Providers/StringSignatureTypeProvider.cs
           </ExcludeByFile>

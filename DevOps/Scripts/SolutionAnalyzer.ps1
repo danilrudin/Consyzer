@@ -20,6 +20,7 @@ param(
 	[string]$ReportFormats = "Console"
 )
 
+$ConsyzerPath = (Resolve-Path -LiteralPath $ConsyzerPath).ProviderPath
 Set-Location $SolutionPath
 
 # Construct platform-independent regex to match bin/<Configuration> folders

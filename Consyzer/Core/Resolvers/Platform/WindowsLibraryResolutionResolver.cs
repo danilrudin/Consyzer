@@ -38,7 +38,7 @@ internal sealed class WindowsLibraryResolutionResolver(
                 StringComparer.OrdinalIgnoreCase
             );
 
-        if (TryResolveExplicit(
+        if (Path.IsPathFullyQualified(context.LibraryName) && TryResolveExplicit(
             context,
             context.LibraryName,
             candidates,
@@ -46,17 +46,6 @@ internal sealed class WindowsLibraryResolutionResolver(
             out var result
         ))
         {
-            if (context.HasDllImportSearchPathOverride
-                && result.ResolutionState == ResolutionState.Resolved
-                && !Path.IsPathRooted(context.LibraryName))
-            {
-                return CreateInconclusive(
-                    context,
-                    heuristicCandidates,
-                    NotSimulatedMechanisms.WindowsDotNetSearchPathOverrides
-                );
-            }
-
             return result;
         }
 
@@ -67,6 +56,14 @@ internal sealed class WindowsLibraryResolutionResolver(
                 heuristicCandidates,
                 NotSimulatedMechanisms.WindowsDotNetSearchPathOverrides
             );
+        }
+
+        // A relative path is appended to each DLL search directory by Windows.
+        // Rooted paths such as C:foo.dll and \foo.dll depend on process state
+        // that cannot be inferred from the analyzed assembly.
+        if (Path.IsPathRooted(context.LibraryName))
+        {
+            return CreateInconclusive(context, heuristicCandidates, NotSimulated);
         }
 
         var defaultSystemLocations = GetDefaultSystemLocations();
@@ -103,7 +100,9 @@ internal sealed class WindowsLibraryResolutionResolver(
                 context,
                 candidate,
                 [currentDirectory],
-                MechanismKind.CurrentDirectory,
+                IsExplicitPath(context.LibraryName)
+                    ? MechanismKind.ExplicitPath
+                    : MechanismKind.CurrentDirectory,
                 heuristicCandidates,
                 out result
             ))

@@ -61,7 +61,7 @@ internal static class AnalysisOutputStructure
             public const string TargetPath = nameof(LibraryResolution.TargetPath);
             public const string Name = nameof(LibraryResolution.LibraryName);
             public const string ResolutionState = nameof(LibraryResolution.ResolutionState);
-            public const string ResolvedPath = nameof(ResolvedPresence.Path);
+            public const string ResolvedPath = "ResolvedPath";
             public const string MechanismKind = nameof(ResolvedPresence.MechanismKind);
             public const string HeuristicCandidates = nameof(LibraryResolution.HeuristicCandidates);
             public const string NotSimulated = nameof(LibraryResolution.NotSimulated);

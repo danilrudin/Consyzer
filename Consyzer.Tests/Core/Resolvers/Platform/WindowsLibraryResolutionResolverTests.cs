@@ -395,6 +395,29 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
     }
 
     [Fact]
+    public void Resolve_ShouldSearchAssemblyDirectoryForRelativePath()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        const string directoryName = "native";
+        var subdirectory = Directory.CreateDirectory(
+            Path.Combine(_analyzedDirectory.Path, directoryName)
+        );
+        var libraryPath = Path.Combine(subdirectory.FullName, RelativePathLibraryName);
+        File.WriteAllText(libraryPath, TestFileContent);
+
+        var requestedPath = Path.Combine(directoryName, RelativePathLibraryName);
+        var result = Resolve(requestedPath);
+
+        AssertResolved(
+            result,
+            requestedPath,
+            MechanismKind.AssemblyDirectory,
+            libraryPath
+        );
+    }
+
+    [Fact]
     public void Resolve_ShouldReturnInconclusiveForRelativePath_WhenSearchPathOverrideIsPresent()
     {
         if (!OperatingSystem.IsWindows()) return;
@@ -423,7 +446,7 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
     }
 
     [Fact]
-    public void Resolve_ShouldNotFallbackToPath_WhenRelativeExplicitPathDoesNotExist()
+    public void Resolve_ShouldSearchPathForRelativePath()
     {
         if (!OperatingSystem.IsWindows()) return;
 
@@ -434,10 +457,8 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         var environmentSubdirectory = Directory.CreateDirectory(
             Path.Combine(_envPathDirectory.Path, directoryName)
         );
-        File.WriteAllText(
-            Path.Combine(environmentSubdirectory.FullName, RelativePathLibraryName),
-            TestFileContent
-        );
+        var libraryPath = Path.Combine(environmentSubdirectory.FullName, RelativePathLibraryName);
+        File.WriteAllText(libraryPath, TestFileContent);
 
         using var currentDirectoryScope = new CurrentDirectoryScope(currentDirectory.Path);
         using var pathScope = new EnvironmentVariableScope(
@@ -448,10 +469,39 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         var requestedPath = Path.Combine(directoryName, RelativePathLibraryName);
         var result = Resolve(requestedPath);
 
-        Assert.Equal(ResolutionState.Missing, result.ResolutionState);
+        AssertResolved(
+            result,
+            requestedPath,
+            MechanismKind.EnvironmentOverride,
+            libraryPath
+        );
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Resolve_ShouldBeInconclusiveWhenRelativePathIsNotFound(
+        bool hasDllImportSearchPathOverride
+    )
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        using var currentDirectory = new TemporaryDirectory("consyzer-relative-missing-");
+        using var currentDirectoryScope = new CurrentDirectoryScope(currentDirectory.Path);
+        using var pathScope = new EnvironmentVariableScope(
+            PathVariableName,
+            _envPathDirectory.Path
+        );
+
+        var result = _resolver.Resolve(new LibraryResolutionContext(
+            _targetFile,
+            Path.Combine("native", MissingLibraryName),
+            hasDllImportSearchPathOverride
+        ));
+
+        Assert.Equal(ResolutionState.Inconclusive, result.ResolutionState);
         Assert.Null(result.ResolvedPresence);
-        Assert.Empty(result.HeuristicCandidates);
-        Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
+        Assert.NotEqual(NotSimulatedMechanisms.None, result.NotSimulated);
     }
 
     [Theory]

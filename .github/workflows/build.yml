@@ -88,11 +88,20 @@ jobs:
         if: github.event_name == 'push' || env.SONAR_TOKEN != ''
         shell: pwsh
         run: |
+          [xml]$runSettings = Get-Content -LiteralPath coverlet.runsettings -Raw
+          $coverageExclusions = (
+            $runSettings.RunSettings.DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile -split ',' |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ }
+          ) -join ','
+          if (-not $coverageExclusions) { throw 'Coverage exclusions are missing from coverlet.runsettings.' }
+
           .\.sonar\scanner\dotnet-sonarscanner begin `
             /k:"danilrudin_Consyzer" `
             /o:"danilrudin" `
             /d:sonar.token="$env:SONAR_TOKEN" `
             /d:sonar.dotnet.excludeTestProjects=true `
+            /d:sonar.coverage.exclusions="$coverageExclusions" `
             /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
 
       - name: Build
