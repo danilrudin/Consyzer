@@ -24,8 +24,8 @@ internal sealed class LinuxLibraryResolutionResolver(
         | NotSimulatedMechanisms.LinuxLdPreload
         | NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides;
 
-    private static readonly IReadOnlyList<string> DefaultSystemLocations =
-        CreateDefaultSystemLocations();
+    private static readonly IReadOnlyList<string> DefaultSystemLocations = CreateDefaultSystemLocations();
+
     private static readonly string[] DynamicStringTokens =
     [
         "$ORIGIN",
@@ -181,7 +181,7 @@ internal sealed class LinuxLibraryResolutionResolver(
         return DistinctCandidates(candidates, StringComparer.Ordinal);
     }
 
-    private static IReadOnlyList<string> CreateDefaultSystemLocations()
+    private static List<string> CreateDefaultSystemLocations()
     {
         var directories = new List<string>
         {
@@ -223,7 +223,7 @@ internal sealed class LinuxLibraryResolutionResolver(
 
     private static bool EndsWithSharedObjectName(string input)
         => input.EndsWith(LibraryExtension, StringComparison.Ordinal)
-        || input.Contains(LibraryExtension + ".", StringComparison.Ordinal);
+            || input.Contains(LibraryExtension + ".", StringComparison.Ordinal);
 
     private static string WithLibPrefix(string input) => "lib" + input;
 
@@ -231,11 +231,6 @@ internal sealed class LinuxLibraryResolutionResolver(
     {
         if (path is null) return false;
 
-        foreach (var token in DynamicStringTokens)
-        {
-            if (path.Contains(token, StringComparison.Ordinal)) return true;
-        }
-
-        return false;
+        return DynamicStringTokens.Any(token => path.Contains(token, StringComparison.Ordinal));
     }
 }

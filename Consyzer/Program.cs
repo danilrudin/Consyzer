@@ -23,7 +23,7 @@ try
 }
 catch (InvalidOperationException exception)
 {
-    Console.Error.WriteLine($"Invalid command-line options: {exception.Message}");
+    await Console.Error.WriteLineAsync($"Invalid command-line options: {exception.Message}");
     return ExitStatus.InvalidInput(InvalidInputReason.InvalidOptionValue).ProcessExitCode;
 }
 

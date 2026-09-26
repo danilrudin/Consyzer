@@ -130,7 +130,8 @@ internal sealed class WindowsLibraryResolutionResolver(
     {
         if (input.EndsWith(LibraryExtension, StringComparison.OrdinalIgnoreCase)
             || input.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase)
-            || input.EndsWith('.'))
+            || input.EndsWith('.')
+        )
         {
             return [input];
         }

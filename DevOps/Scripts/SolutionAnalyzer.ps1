@@ -32,7 +32,7 @@ $analysisFolders = Get-ChildItem -Path . -Recurse -Directory |
 
 if (-not $analysisFolders) {
 	Write-Warning "No build output folders found for analysis."
-	Exit 3
+	exit 3
 }
 
 $knownExitCodes = @(0, 1, 2, 3, 4)
@@ -122,4 +122,4 @@ else {
 }
 
 Write-Output ("Final exit code: {0}" -f $finalExitCode)
-Exit $finalExitCode
+exit $finalExitCode

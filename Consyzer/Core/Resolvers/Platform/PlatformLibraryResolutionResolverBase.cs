@@ -241,25 +241,11 @@ internal abstract class PlatformLibraryResolutionResolverBase
 
     protected static bool IsExplicitPath(string path)
         => Path.IsPathRooted(path)
-        || path.Contains(Path.DirectorySeparatorChar)
-        || path.Contains(Path.AltDirectorySeparatorChar);
+            || path.Contains(Path.DirectorySeparatorChar)
+            || path.Contains(Path.AltDirectorySeparatorChar);
 
     protected static IReadOnlyList<string> DistinctCandidates(
         IEnumerable<string> candidates,
         StringComparer comparer
-    )
-    {
-        var seen = new HashSet<string>(comparer);
-        var result = new List<string>();
-
-        foreach (var candidate in candidates)
-        {
-            if (seen.Add(candidate))
-            {
-                result.Add(candidate);
-            }
-        }
-
-        return result;
-    }
+    ) => [.. candidates.Distinct(comparer)];
 }
