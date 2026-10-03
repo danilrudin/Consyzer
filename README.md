@@ -45,7 +45,7 @@ At this time, Consyzer supports checking the presence of native libraries in the
 ## How it works
 
 1. Consyzer selects files for analysis based on the specified directory and search patterns;
-2. Consyzer logs and excludes from analysis files that are not ECMA-355 assemblies;
+2. Consyzer logs and excludes from analysis files that are not ECMA-335 assemblies;
 3. Consyzer analyzes the remaining ECMA assemblies for the presence of P/Invoke methods;
 4. Consyzer analyzes each found P/Invoke method and checks whether the corresponding native libraries exist in the system;
 5. Consyzer generates a report based on the analysis results in one or more formats depending on the configuration;
@@ -185,6 +185,8 @@ The following report formats are supported:
 > Code `0` is returned only when all found P/Invoke dependencies have the `Resolved` state.
 
 ### Usage
+
+Consyzer requires the .NET 10 Runtime to be installed on the machine where it is run.
 
 **Consyzer** is run from the command line (CLI) and requires two mandatory parameters:
 

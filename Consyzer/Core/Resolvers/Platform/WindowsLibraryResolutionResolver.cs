@@ -68,6 +68,9 @@ internal sealed class WindowsLibraryResolutionResolver(
 
         var defaultSystemLocations = GetDefaultSystemLocations();
         var currentDirectory = Directory.GetCurrentDirectory();
+        var currentDirectoryMechanism = IsExplicitPath(context.LibraryName)
+            ? MechanismKind.ExplicitPath
+            : MechanismKind.CurrentDirectory;
         var environmentDirectories = SplitSearchPath(
             Environment.GetEnvironmentVariable(EnvironmentVariablePath)
         ).ToArray();
@@ -100,9 +103,7 @@ internal sealed class WindowsLibraryResolutionResolver(
                 context,
                 candidate,
                 [currentDirectory],
-                IsExplicitPath(context.LibraryName)
-                    ? MechanismKind.ExplicitPath
-                    : MechanismKind.CurrentDirectory,
+                currentDirectoryMechanism,
                 heuristicCandidates,
                 out result
             ))
