@@ -38,15 +38,15 @@ internal sealed class WindowsLibraryResolutionResolver(
                 StringComparer.OrdinalIgnoreCase
             );
 
-        if (Path.IsPathFullyQualified(context.LibraryName) && TryResolveExplicit(
-            context,
-            context.LibraryName,
-            candidates,
-            heuristicCandidates,
-            out var result
-        ))
+        // Application DLL redirection can override even an absolute import path.
+        if (Path.IsPathFullyQualified(context.LibraryName))
         {
-            return result;
+            return ResolveExplicitPath(
+                context,
+                candidates,
+                heuristicCandidates,
+                notSimulatedWhenMissing: NotSimulatedMechanisms.WindowsDllRedirection
+            );
         }
 
         if (context.HasDllImportSearchPathOverride)
@@ -81,7 +81,7 @@ internal sealed class WindowsLibraryResolutionResolver(
                 context,
                 candidate,
                 heuristicCandidates,
-                out result
+                out var result
             ))
             {
                 return result;

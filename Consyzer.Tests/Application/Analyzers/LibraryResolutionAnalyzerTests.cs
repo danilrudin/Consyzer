@@ -73,6 +73,34 @@ public sealed class LibraryResolutionAnalyzerTests
         ));
     }
 
+    [Fact]
+    public void Analyze_ShouldResolveSameLibrarySeparatelyForEachTargetAssembly()
+    {
+        using var directory = new TemporaryDirectory("consyzer-library-analyzer-");
+        using var firstDirectory = new TemporaryDirectory("first-", directory.Path);
+        using var secondDirectory = new TemporaryDirectory("second-", directory.Path);
+        var libraryName = OperatingSystem.IsWindows() ? "consyzer_scoped.dll" : "consyzer_scoped.so";
+        var firstTarget = firstDirectory.CreateFile("First.dll");
+        var secondTarget = secondDirectory.CreateFile("Second.dll");
+        var firstLibrary = firstDirectory.CreateFile(libraryName);
+        var secondLibrary = secondDirectory.CreateFile(libraryName);
+        var analyzer = CreateAnalyzer(directory.Path);
+
+        var outcome = analyzer.Analyze(
+        [
+            CreateGroup(firstTarget, libraryName, libraryName),
+            CreateGroup(secondTarget, libraryName)
+        ]);
+
+        Assert.Equal(2, outcome.Results.Count);
+        var firstResult = Assert.Single(outcome.Results, result => result.TargetPath == firstTarget.FullName);
+        var secondResult = Assert.Single(outcome.Results, result => result.TargetPath == secondTarget.FullName);
+        Assert.Equal(ResolutionState.Resolved, firstResult.ResolutionState);
+        Assert.Equal(ResolutionState.Resolved, secondResult.ResolutionState);
+        Assert.Equal(firstLibrary.FullName, firstResult.ResolvedPresence?.Path);
+        Assert.Equal(secondLibrary.FullName, secondResult.ResolvedPresence?.Path);
+    }
+
     private static LibraryResolutionAnalyzer CreateAnalyzer(string analysisDirectory)
         => new(new MultiPlatformLibraryResolutionResolver(analysisDirectory));
 

@@ -57,26 +57,18 @@ internal sealed class LinuxLibraryResolutionResolver(
             );
         }
 
-        if (TryResolveExplicit(
-            context,
-            context.LibraryName,
-            candidates,
-            heuristicCandidates,
-            out var result
-        ))
+        if (Path.IsPathRooted(context.LibraryName))
         {
-            if (context.HasDllImportSearchPathOverride
-                && result.ResolutionState == ResolutionState.Resolved
-                && !Path.IsPathRooted(context.LibraryName))
-            {
-                return CreateInconclusive(
-                    context,
-                    heuristicCandidates,
-                    NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides
-                );
-            }
+            return ResolveExplicitPath(
+                context,
+                candidates,
+                heuristicCandidates
+            );
+        }
 
-            return result;
+        if (IsExplicitPath(context.LibraryName))
+        {
+            return ResolveRelativeExplicitPath(context, candidates);
         }
 
         var ldLibraryPath = Environment.GetEnvironmentVariable(EnvironmentVariablePath);
@@ -98,7 +90,8 @@ internal sealed class LinuxLibraryResolutionResolver(
                 ldLibraryPath,
                 true,
                 false,
-                ':'
+                ':',
+                ';'
             )
             .Where(path => !ContainsDynamicStringToken(path))
             .ToArray();
@@ -109,7 +102,7 @@ internal sealed class LinuxLibraryResolutionResolver(
                 context,
                 candidate,
                 heuristicCandidates,
-                out result
+                out var result
             ))
             {
                 return result;
@@ -149,6 +142,52 @@ internal sealed class LinuxLibraryResolutionResolver(
         );
     }
 
+    private static LibraryResolution ResolveRelativeExplicitPath(
+        LibraryResolutionContext context,
+        IReadOnlyList<string> candidates
+    )
+    {
+        if (context.HasDllImportSearchPathOverride)
+        {
+            return CreateInconclusive(
+                context,
+                [],
+                NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides
+            );
+        }
+
+        var currentDirectory = Directory.GetCurrentDirectory();
+
+        // .NET tries the assembly directory before passing a relative path to dlopen.
+        // A path containing '/' bypasses LD_LIBRARY_PATH and system search directories.
+        foreach (var candidate in candidates)
+        {
+            if (TryResolveAssemblyDirectory(context, candidate, [], out var result))
+            {
+                return result;
+            }
+
+            if (TryResolveInDirectories(
+                context,
+                candidate,
+                [currentDirectory],
+                MechanismKind.ExplicitPath,
+                [],
+                out result
+            ))
+            {
+                return result;
+            }
+        }
+
+        // Host-provided NATIVE_DLL_SEARCH_DIRECTORIES cannot be inferred from metadata.
+        return CreateInconclusive(
+            context,
+            [],
+            NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides
+        );
+    }
+
     private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
     {
         if (Path.IsPathRooted(input))
@@ -159,7 +198,7 @@ internal sealed class LinuxLibraryResolutionResolver(
         var addLibPrefix = !IsExplicitPath(input);
         var candidates = new List<string>(4);
 
-        if (EndsWithSharedObjectName(input))
+        if (ContainsSharedObjectSuffix(input))
         {
             var withCanonicalExtension = input + LibraryExtension;
 
@@ -221,9 +260,15 @@ internal sealed class LinuxLibraryResolutionResolver(
         return directories;
     }
 
-    private static bool EndsWithSharedObjectName(string input)
-        => input.EndsWith(LibraryExtension, StringComparison.Ordinal)
-            || input.Contains(LibraryExtension + ".", StringComparison.Ordinal);
+    private static bool ContainsSharedObjectSuffix(string input)
+    {
+        // CoreCLR checks only the first occurrence, including directory components.
+        var extensionIndex = input.IndexOf(LibraryExtension, StringComparison.Ordinal);
+        if (extensionIndex < 0) return false;
+
+        var suffixEnd = extensionIndex + LibraryExtension.Length;
+        return suffixEnd == input.Length || input[suffixEnd] == '.';
+    }
 
     private static string WithLibPrefix(string input) => "lib" + input;
 

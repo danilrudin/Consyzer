@@ -1,4 +1,3 @@
-using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using Consyzer.Options;
 using Consyzer.Application;
@@ -58,7 +57,6 @@ internal static partial class ServiceCollectionExtensions
         services.AddScoped<IFileHasher, Sha256FileHasher>();
 
         services.AddScoped<IExtractor<FileInfo, IEnumerable<PInvokeMethod>>, PInvokeMethodExtractor>();
-        services.AddScoped<IExtractor<MethodDefinition, MethodSignature>, MethodSignatureExtractor>();
         services.AddScoped<IExtractor<FileInfo, AssemblyMetadata>, AssemblyMetadataExtractor>();
 
         services.AddScoped<IFileClassifier<AnalysisFileClassification>, EcmaFileClassifier>();

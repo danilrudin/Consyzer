@@ -507,7 +507,7 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Resolve_ShouldReturnMissing_WhenExplicitPathDoesNotExist(
+    public void Resolve_ShouldReportRedirectionUncertainty_WhenAbsolutePathDoesNotExist(
         bool hasDllImportSearchPathOverride
     )
     {
@@ -522,10 +522,10 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
             hasDllImportSearchPathOverride
         ));
 
-        Assert.Equal(ResolutionState.Missing, result.ResolutionState);
+        Assert.Equal(ResolutionState.Inconclusive, result.ResolutionState);
         Assert.Null(result.ResolvedPresence);
         Assert.Empty(result.HeuristicCandidates);
-        Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
+        Assert.Equal(NotSimulatedMechanisms.WindowsDllRedirection, result.NotSimulated);
     }
 
     [Fact]

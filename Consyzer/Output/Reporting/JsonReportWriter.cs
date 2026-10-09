@@ -38,7 +38,31 @@ internal sealed class JsonReportWriter(
     {
         var encoding = Encoding.GetEncoding(_options.Encoding);
 
-        var json = JsonSerializer.Serialize(outcome, JsonOptions);
+        // Keep the public report shape independent of the internal resolution model.
+        var report = new
+        {
+            Analysis = new { outcome.Platform },
+            AssemblyMetadataList = outcome.AssemblyMetadataList.Select(metadata => new
+            {
+                metadata.File,
+                metadata.Version,
+                CreationDateUtc = metadata.CreationDateUtc.ToString("O"),
+                metadata.Sha256
+            }),
+            outcome.PInvokeMethodGroups,
+            LibraryResolutions = outcome.LibraryResolutions.Select(resolution => new
+            {
+                resolution.TargetPath,
+                resolution.LibraryName,
+                resolution.ResolutionState,
+                ResolvedPath = resolution.ResolvedPresence?.Path,
+                MechanismKind = resolution.ResolvedPresence?.MechanismKind,
+                resolution.HeuristicCandidates,
+                resolution.NotSimulated
+            }),
+            outcome.Summary
+        };
+        var json = JsonSerializer.Serialize(report, JsonOptions);
         File.WriteAllText(fullPath, json, encoding);
     }
 }

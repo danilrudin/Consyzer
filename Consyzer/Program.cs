@@ -8,23 +8,29 @@ using Consyzer.Output.Logging;
 using Consyzer.Core.Models.Exit;
 using Consyzer.DependencyInjection;
 
-var configuration = new ConfigurationBuilder()
-    .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: false)
-    .AddCommandLine(args)
-    .Build();
-
+IConfigurationRoot configuration;
 CommandLineOptions options;
 
 try
 {
+    configuration = new ConfigurationBuilder()
+        .SetBasePath(AppContext.BaseDirectory)
+        .AddJsonFile("appsettings.json", optional: false)
+        .AddCommandLine(args)
+        .Build();
+
     options = configuration.Get<CommandLineOptions>()
         ?? throw new InvalidOperationException("Command-line options could not be bound.");
 }
-catch (InvalidOperationException exception)
+catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or FormatException)
 {
     await Console.Error.WriteLineAsync($"Invalid command-line options: {exception.Message}");
     return ExitStatus.InvalidInput(InvalidInputReason.InvalidOptionValue).ProcessExitCode;
+}
+catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+{
+    await Console.Error.WriteLineAsync($"Could not read configuration: {exception.Message}");
+    return ExitStatus.ToolError().ProcessExitCode;
 }
 
 using var serviceProvider = new ServiceCollection()

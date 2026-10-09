@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Xml;
 using Microsoft.Extensions.Options;
 using Consyzer.Options;
 using Consyzer.Output.Builders;
@@ -53,7 +55,7 @@ internal sealed class ConsoleReportWriter(
             .PushIndent()
             .IndexedSection(metadataList, (b, metadata) =>
             {
-                b.Line(Label.Assembly.File, metadata.File.Name);
+                b.Line(Label.Assembly.File, metadata.File.FullName);
                 b.Line(Label.Assembly.Version, metadata.Version);
                 b.Line(Label.Assembly.CreationDateUtc, metadata.CreationDateUtc.ToString("O"));
                 b.Line(Label.Assembly.Sha256, metadata.Sha256);
@@ -71,11 +73,18 @@ internal sealed class ConsoleReportWriter(
             .PushIndent()
             .IndexedSection(groups, (b, group) =>
             {
-                b.Line(Label.PInvoke.File, $"{group.File.Name}, Found: {group.Methods.Count}");
+                b.Line(Label.PInvoke.File, group.File.FullName);
 
                 b.IndexedSection(group.Methods, (bb, method) =>
                 {
-                    bb.Line(Label.PInvoke.Signature, $"'{method.Signature}'");
+                    bb.Line(Label.PInvoke.Signature).PushIndent();
+                    bb.Line(Label.PInvoke.ReturnType, method.Signature.ReturnType);
+                    bb.Line(Label.PInvoke.IsStatic, XmlConvert.ToString(method.Signature.IsStatic));
+                    bb.Line(Label.PInvoke.Namespace, method.Signature.Namespace);
+                    bb.Line(Label.PInvoke.Class, method.Signature.Class);
+                    bb.Line(Label.PInvoke.Method, method.Signature.Method);
+                    bb.Line(Label.PInvoke.MethodArguments, JsonSerializer.Serialize(method.Signature.MethodArguments));
+                    bb.PopIndent();
                     bb.Line(Label.PInvoke.ImportName, $"'{method.ImportName}'");
                     bb.Line(Label.PInvoke.ImportFlags, $"'{method.ImportFlags}'");
                 });
@@ -104,9 +113,7 @@ internal sealed class ConsoleReportWriter(
 
                 b.Line(
                     Label.Library.HeuristicCandidates,
-                    libraryResolution.HeuristicCandidates.Count == 0
-                        ? "[]"
-                        : string.Join(", ", libraryResolution.HeuristicCandidates));
+                    JsonSerializer.Serialize(libraryResolution.HeuristicCandidates));
 
                 b.Line(
                     Label.Library.NotSimulated,

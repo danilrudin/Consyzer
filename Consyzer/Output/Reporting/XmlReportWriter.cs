@@ -27,6 +27,7 @@ internal sealed class XmlReportWriter(
         using var writer = XmlWriter.Create(fullPath, new XmlWriterSettings
         {
             Indent = true,
+            NewLineHandling = NewLineHandling.Entitize,
             Encoding = encoding,
             IndentChars = _options.IndentChars
         });
@@ -102,7 +103,7 @@ internal sealed class XmlReportWriter(
     {
         writer.WriteStartElement(Label.PInvoke.Signature);
         writer.WriteElementString(Label.PInvoke.ReturnType, signature.ReturnType);
-        writer.WriteElementString(Label.PInvoke.IsStatic, signature.IsStatic.ToString());
+        writer.WriteElementString(Label.PInvoke.IsStatic, XmlConvert.ToString(signature.IsStatic));
         writer.WriteElementString(Label.PInvoke.Namespace, signature.Namespace);
         writer.WriteElementString(Label.PInvoke.Class, signature.Class);
         writer.WriteElementString(Label.PInvoke.Method, signature.Method);

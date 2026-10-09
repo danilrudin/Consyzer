@@ -7,31 +7,6 @@ internal abstract class PlatformLibraryResolutionResolverBase
     public abstract string PlatformName { get; }
     public abstract LibraryResolution Resolve(LibraryResolutionContext context);
 
-    protected static bool TryGetExplicitPathCandidate(
-        string path,
-        IReadOnlyList<string> candidatePaths,
-        out string? candidate
-    )
-    {
-        if (!IsExplicitPath(path))
-        {
-            candidate = null;
-            return false;
-        }
-
-        foreach (var candidatePath in candidatePaths)
-        {
-            candidate = GetCandidatePath(null, candidatePath);
-            if (candidate is not null)
-            {
-                return true;
-            }
-        }
-
-        candidate = null;
-        return true;
-    }
-
     protected static IReadOnlyList<string> CollectHeuristicCandidates(
         LibraryResolutionContext context,
         IReadOnlyList<string> candidates,
@@ -40,7 +15,7 @@ internal abstract class PlatformLibraryResolutionResolverBase
     )
     {
         var targetDirectory = context.TargetFile.DirectoryName;
-        if (string.IsNullOrWhiteSpace(targetDirectory))
+        if (string.IsNullOrEmpty(targetDirectory))
         {
             return [];
         }
@@ -60,30 +35,30 @@ internal abstract class PlatformLibraryResolutionResolverBase
         );
     }
 
-    protected static bool TryResolveExplicit(
+    protected static LibraryResolution ResolveExplicitPath(
         LibraryResolutionContext context,
-        string originalPath,
         IReadOnlyList<string> candidates,
         IReadOnlyList<string> heuristicCandidates,
-        out LibraryResolution result
+        NotSimulatedMechanisms notSimulatedWhenMissing = NotSimulatedMechanisms.None
     )
     {
-        if (!TryGetExplicitPathCandidate(originalPath, candidates, out var candidate))
+        foreach (var candidatePath in candidates)
         {
-            result = default!;
-            return false;
+            var candidate = GetCandidatePath(null, candidatePath);
+            if (candidate is not null)
+            {
+                return CreateResolved(
+                    context,
+                    candidate,
+                    MechanismKind.ExplicitPath,
+                    heuristicCandidates
+                );
+            }
         }
 
-        result = candidate is not null
-            ? CreateResolved(
-                context,
-                candidate,
-                MechanismKind.ExplicitPath,
-                heuristicCandidates
-            )
-            : CreateMissing(context, heuristicCandidates);
-
-        return true;
+        return notSimulatedWhenMissing == NotSimulatedMechanisms.None
+            ? CreateMissing(context, heuristicCandidates)
+            : CreateInconclusive(context, heuristicCandidates, notSimulatedWhenMissing);
     }
 
     protected static bool TryResolveAssemblyDirectory(
@@ -113,7 +88,7 @@ internal abstract class PlatformLibraryResolutionResolverBase
     {
         foreach (var directory in directories)
         {
-            if (string.IsNullOrWhiteSpace(directory)) continue;
+            if (string.IsNullOrEmpty(directory)) continue;
 
             var candidate = GetCandidatePath(directory, fileName);
             if (candidate is not null)
@@ -140,7 +115,7 @@ internal abstract class PlatformLibraryResolutionResolverBase
         params char[] separators
     )
     {
-        if (string.IsNullOrWhiteSpace(path)) yield break;
+        if (string.IsNullOrEmpty(path)) yield break;
 
         char[] effectiveSeparators = separators.Length == 0
             ? [Path.PathSeparator]
@@ -217,7 +192,7 @@ internal abstract class PlatformLibraryResolutionResolverBase
     {
         foreach (var dir in directories)
         {
-            if (string.IsNullOrWhiteSpace(dir)) continue;
+            if (string.IsNullOrEmpty(dir)) continue;
 
             foreach (var fileName in fileNames)
             {
@@ -232,7 +207,7 @@ internal abstract class PlatformLibraryResolutionResolverBase
 
     protected static string? GetCandidatePath(string? baseDirectory, string file)
     {
-        var candidate = string.IsNullOrWhiteSpace(baseDirectory)
+        var candidate = string.IsNullOrEmpty(baseDirectory)
             ? file
             : Path.Combine(baseDirectory, file);
 

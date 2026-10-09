@@ -16,7 +16,7 @@ internal static class LoggingHelper
 
         if (fileTarget is null) return null;
 
-        var logEventInfo = new LogEventInfo { TimeStamp = DateTime.UtcNow };
+        var logEventInfo = new LogEventInfo();
         return fileTarget.FileName.Render(logEventInfo);
     }
 }

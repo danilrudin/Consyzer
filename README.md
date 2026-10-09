@@ -102,35 +102,53 @@ The following report formats are supported:
     Platform: Windows
 [AssemblyMetadataList]
     [0]
-        File: Foo.dll
+        File: C:\Modules\Foo.dll
         Version: 1.0.0.0
         CreationDateUtc: 2025-06-21T12:00:00.0000000Z
         Sha256: ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890
     [1]
-        File: Bar.dll
+        File: C:\Modules\Bar.dll
         Version: 2.1.3.0
         CreationDateUtc: 2025-06-22T15:30:00.0000000Z
         Sha256: 1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF
     [2]
-        File: Baz.dll
+        File: C:\Modules\Baz.dll
         Version: 1.2.0.0
         CreationDateUtc: 2025-06-23T10:45:00.0000000Z
         Sha256: FEDCBA0987654321FEDCBA0987654321FEDCBA0987654321FEDCBA0987654321
 [PInvokeMethodGroups]
     [0]
-        File: Foo.dll, Found: 2
+        File: C:\Modules\Foo.dll
         [0]
-            Signature: 'Int32 static Native.Foo.DОСtuff()'
+            Signature
+                ReturnType: Int32
+                IsStatic: true
+                Namespace: Native
+                Class: Foo
+                Method: DoStuff
+                MethodArguments: []
             ImportName: 'existentlib.dll'
             ImportFlags: 'CallingConventionCDecl'
         [1]
-            Signature: 'Void static Native.Foo.FailStuff(String)'
+            Signature
+                ReturnType: Void
+                IsStatic: true
+                Namespace: Native
+                Class: Foo
+                Method: FailStuff
+                MethodArguments: ["String"]
             ImportName: 'missinglib.dll'
             ImportFlags: 'CallingConventionStdCall'
     [1]
-        File: Baz.dll, Found: 1
+        File: C:\Modules\Baz.dll
         [0]
-            Signature: 'Boolean static .Baz.CheckSomething(Int32)'
+            Signature
+                ReturnType: Boolean
+                IsStatic: true
+                Namespace:
+                Class: Baz
+                Method: CheckSomething
+                MethodArguments: ["Int32"]
             ImportName: 'anotherlib.dll'
             ImportFlags: 'CallingConventionStdCall'
 [LibraryResolutions]
@@ -149,7 +167,7 @@ The following report formats are supported:
         ResolvedPath: null
         MechanismKind: null
         HeuristicCandidates: []
-        NotSimulated: WindowsSxS, WindowsKnownDlls, WindowsDllRedirection
+        NotSimulated: WindowsSxS, WindowsKnownDlls, WindowsDllRedirection, WindowsProcessDirectoryOverrides, WindowsApiSetSchema, WindowsPackageGraph, WindowsLoadedModuleList, WindowsSafeSearchModeAndFlags, WindowsDotNetSearchPathOverrides, WindowsProcessApplicationDirectory
     [2]
         TargetPath: C:\Modules\Baz.dll
         LibraryName: anotherlib.dll

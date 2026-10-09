@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using Consyzer.Options;
 using Consyzer.Output.Builders;
 using Consyzer.Core.Models.Analysis;
@@ -17,6 +17,8 @@ internal sealed class AnalysisLogBuilder(
             .PushIndent()
             .Line(Label.Options.AnalysisDirectory, options.AnalysisDirectory)
             .Line(Label.Options.SearchPatterns, options.SearchPatterns)
+            .Line(nameof(CommandLineOptions.RecursiveSearch), options.RecursiveSearch)
+            .Line(nameof(CommandLineOptions.ReportFormats), options.ReportFormats)
             .PopIndent()
             .Build();
 
@@ -24,7 +26,7 @@ internal sealed class AnalysisLogBuilder(
         new IndentedTextBuilder(_options.IndentChars)
             .Title($"{Section.Bracketed.FilesFound} Count: {files.Count()}")
             .PushIndent()
-            .IndexedItems(files, f => f.Name)
+            .IndexedItems(files, f => f.FullName)
             .PopIndent()
             .Build();
 
@@ -33,15 +35,15 @@ internal sealed class AnalysisLogBuilder(
             .Title(Section.Bracketed.FileClassification)
             .PushIndent()
             .Title($"{Section.Bracketed.NotEcma} Count: {fileClassification.NonEcmaModules.Count}")
-            .IndexedItems(fileClassification.NonEcmaModules, f => f.Name)
+            .IndexedItems(fileClassification.NonEcmaModules, f => f.FullName)
             .PopIndent()
             .PushIndent()
             .Title($"{Section.Bracketed.NotAssemblies} Count: {fileClassification.NonEcmaAssemblies.Count}")
-            .IndexedItems(fileClassification.NonEcmaAssemblies, f => f.Name)
+            .IndexedItems(fileClassification.NonEcmaAssemblies, f => f.FullName)
             .PopIndent()
             .PushIndent()
             .Title($"{Section.Bracketed.EcmaAssemblies} Count: {fileClassification.EcmaAssemblies.Count}")
-            .IndexedItems(fileClassification.EcmaAssemblies, f => f.Name)
+            .IndexedItems(fileClassification.EcmaAssemblies, f => f.FullName)
             .PopIndent()
             .Build();
 

@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json;
+using System.Xml;
 using Microsoft.Extensions.Options;
 using Consyzer.Options;
 using Consyzer.Output.Builders;
@@ -176,28 +178,11 @@ internal sealed class CsvReportWriter(
     {
         if (value is IEnumerable<string> stringList)
         {
-            return EscapeList(stringList);
+            return EscapeValue(JsonSerializer.Serialize(stringList));
         }
 
-        return EscapeValue(value?.ToString());
+        return EscapeValue(value is bool boolean ? XmlConvert.ToString(boolean) : value?.ToString());
     }
-
-    private string EscapeList(IEnumerable<string> items)
-    {
-        var innerDelimiter = GetSafeInnerDelimiter(_options.Delimiter);
-        var joined = string.Join(innerDelimiter.ToString(), items);
-
-        return EscapeValue(joined);
-    }
-
-    private static char GetSafeInnerDelimiter(char delimiter)
-        => delimiter switch
-        {
-            ';' => '|',
-            '|' => '/',
-            ',' => ';',
-            _ => ' '
-        };
 
     private static string EscapeValue(string? value)
     {
@@ -206,9 +191,6 @@ internal sealed class CsvReportWriter(
             return "\"\"";
         }
 
-        return $"\"{value
-            .Replace("\"", "\"\"")
-            .Replace('\n', ' ')
-            .Replace('\r', ' ')}\"";
+        return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 }
