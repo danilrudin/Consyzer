@@ -9,6 +9,12 @@ public sealed class AnalysisExitCodeAnalyzerTests
     private readonly AnalysisExitCodeAnalyzer _analyzer = new();
 
     [Fact]
+    public void Analyze_ShouldReturnSuccess_WhenThereAreNoNativeDependencies()
+    {
+        Assert.Equal(ExitStatus.Success(), _analyzer.Analyze([]));
+    }
+
+    [Fact]
     public void Analyze_ShouldReturnSuccess_WhenAllDependenciesAreResolved()
     {
         var result = _analyzer.Analyze(

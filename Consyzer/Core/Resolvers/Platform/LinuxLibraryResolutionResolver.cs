@@ -220,44 +220,33 @@ internal sealed class LinuxLibraryResolutionResolver(
         return DistinctCandidates(candidates, StringComparer.Ordinal);
     }
 
-    private static List<string> CreateDefaultSystemLocations()
+    private static IReadOnlyList<string> CreateDefaultSystemLocations()
     {
-        var directories = new List<string>
+        var multiarch = RuntimeInformation.ProcessArchitecture switch
         {
-            "/lib",
-            "/usr/lib",
-            "/lib64",
-            "/usr/lib64"
+            Architecture.X64 => "x86_64-linux-gnu",
+            Architecture.X86 => "i386-linux-gnu",
+            Architecture.Arm64 => "aarch64-linux-gnu",
+            Architecture.Arm => "arm-linux-gnueabihf",
+            _ => null
         };
 
-        string[] multiarchDirectories = RuntimeInformation.ProcessArchitecture switch
+        // Debian-style glibc searches multiarch directories before the generic pair.
+        // Do not mix this layout with the lib64 layout used by other distributions.
+        if (multiarch is not null && Directory.Exists($"/lib/{multiarch}"))
         {
-            Architecture.X64 =>
+            return
             [
-                "/lib/x86_64-linux-gnu",
-                "/usr/lib/x86_64-linux-gnu"
-            ],
-            Architecture.X86 =>
-            [
-                "/lib/i386-linux-gnu",
-                "/usr/lib/i386-linux-gnu"
-            ],
-            Architecture.Arm64 =>
-            [
-                "/lib/aarch64-linux-gnu",
-                "/usr/lib/aarch64-linux-gnu"
-            ],
-            Architecture.Arm =>
-            [
-                "/lib/arm-linux-gnueabihf",
-                "/usr/lib/arm-linux-gnueabihf"
-            ],
-            _ => []
-        };
+                $"/lib/{multiarch}",
+                $"/usr/lib/{multiarch}",
+                "/lib",
+                "/usr/lib"
+            ];
+        }
 
-        directories.AddRange(multiarchDirectories);
-
-        return directories;
+        return Environment.Is64BitProcess && Directory.Exists("/lib64")
+            ? ["/lib64", "/usr/lib64"]
+            : ["/lib", "/usr/lib"];
     }
 
     private static bool ContainsSharedObjectSuffix(string input)

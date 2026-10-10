@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Consyzer.Input;
@@ -49,7 +49,7 @@ var analysisLogBuilder = scopedServices.GetRequiredService<IAnalysisLogBuilder>(
 
 if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
 {
-    logger.LogWarning(
+    logger.LogError(
         "Required {Parameter} parameter is not specified.",
         nameof(options.AnalysisDirectory)
     );
@@ -59,7 +59,7 @@ if (string.IsNullOrWhiteSpace(options.AnalysisDirectory))
 
 if (string.IsNullOrWhiteSpace(options.SearchPatterns))
 {
-    logger.LogWarning(
+    logger.LogError(
         "Required {Parameter} parameter is not specified.",
         nameof(options.SearchPatterns)
     );
@@ -69,7 +69,7 @@ if (string.IsNullOrWhiteSpace(options.SearchPatterns))
 
 if (!Directory.Exists(options.AnalysisDirectory))
 {
-    logger.LogWarning(
+    logger.LogError(
         "Analysis directory '{AnalysisDirectory}' does not exist.",
         options.AnalysisDirectory
     );
@@ -97,7 +97,7 @@ try
 
     if (files.Count == 0)
     {
-        logger.LogWarning("No files found matching the search patterns.");
+        logger.LogInformation("No files found matching the search patterns.");
         return ExitStatus.InvalidInput(InvalidInputReason.NoFilesFound).ProcessExitCode;
     }
 

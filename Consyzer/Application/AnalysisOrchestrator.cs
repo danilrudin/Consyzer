@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Consyzer.Application.Analyzers;
 using Consyzer.Output.Logging;
 using Consyzer.Output.Reporting;
@@ -36,10 +36,10 @@ internal sealed class AnalysisOrchestrator(
             logger.LogInformation("{Message}", analysisLogBuilder.BuildFileClassificationLog(fileClassification));
         }
 
-        var ecmaAssemblies = fileClassification.EcmaAssemblies.ToList();
+        var ecmaAssemblies = fileClassification.EcmaAssemblies;
         if (ecmaAssemblies.Count == 0)
         {
-            logger.LogWarning("No valid ECMA assemblies found.");
+            logger.LogInformation("No valid ECMA assemblies found.");
             return ExitStatus.InvalidInput(InvalidInputReason.AllFilesInvalid);
         }
 
@@ -47,7 +47,7 @@ internal sealed class AnalysisOrchestrator(
         var metadataList = metadataAnalyzer.Analyze(ecmaAssemblies).ToList();
 
         logger.LogInformation("Analyzing P/Invoke methods...");
-        var pInvokeGroups = pInvokeAnalyzer.Analyze(ecmaAssemblies).ToList();
+        var pInvokeGroups = pInvokeAnalyzer.Analyze(ecmaAssemblies);
 
         if (pInvokeGroups.Count == 0)
         {
@@ -101,7 +101,7 @@ internal sealed class AnalysisOrchestrator(
             AnalysisExitCode.Success => LogLevel.Information,
             AnalysisExitCode.Missing => LogLevel.Warning,
             AnalysisExitCode.Inconclusive => LogLevel.Warning,
-            AnalysisExitCode.InvalidInput => LogLevel.Warning,
+            AnalysisExitCode.InvalidInput => LogLevel.Error,
             AnalysisExitCode.ToolError => LogLevel.Error,
             _ => LogLevel.Information
         };

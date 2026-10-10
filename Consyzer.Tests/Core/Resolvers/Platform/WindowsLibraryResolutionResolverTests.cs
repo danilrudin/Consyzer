@@ -94,7 +94,7 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
     }
 
     [Fact]
-    public void Resolve_ShouldReturnResolvedWithDefaultSystemLocations_WhenLibraryExistsInSystemDirectory()
+    public void Resolve_ShouldPreferSystemDirectoryOverCurrentDirectoryAndPath()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -107,6 +107,12 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
             .FirstOrDefault(name => name?.EndsWith(NativeLibraryExtension, StringComparison.OrdinalIgnoreCase) is true);
 
         Assert.False(string.IsNullOrWhiteSpace(libraryName));
+
+        using var currentDirectory = new TemporaryDirectory(RelativePathDirectoryPrefix);
+        currentDirectory.CreateFile(libraryName!, TestFileContent);
+        _envPathDirectory.CreateFile(libraryName!, TestFileContent);
+        using var currentDirectoryScope = new CurrentDirectoryScope(currentDirectory.Path);
+        using var pathScope = new EnvironmentVariableScope(PathVariableName, _envPathDirectory.Path);
 
         var result = Resolve(libraryName!);
 

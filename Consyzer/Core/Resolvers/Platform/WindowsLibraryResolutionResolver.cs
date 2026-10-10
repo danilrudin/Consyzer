@@ -156,9 +156,14 @@ internal sealed class WindowsLibraryResolutionResolver(
         );
     }
 
-    private static string?[] GetDefaultSystemLocations() =>
-    [
-        Environment.SystemDirectory,
-        Environment.GetFolderPath(Environment.SpecialFolder.Windows)
-    ];
+    private static string?[] GetDefaultSystemLocations()
+    {
+        var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        return
+        [
+            Environment.SystemDirectory,
+            string.IsNullOrEmpty(windowsDirectory) ? null : Path.Combine(windowsDirectory, "System"),
+            windowsDirectory
+        ];
+    }
 }
