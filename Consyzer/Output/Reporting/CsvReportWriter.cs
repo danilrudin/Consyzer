@@ -7,7 +7,7 @@ using Consyzer.Output.Builders;
 using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
-using static Consyzer.Output.AnalysisOutputStructure;
+using static Consyzer.Output.Reporting.AnalysisReportStructure;
 
 namespace Consyzer.Output.Reporting;
 
@@ -35,7 +35,7 @@ internal sealed class CsvReportWriter(
         File.WriteAllText(fullPath, builder.Build(), encoding);
     }
 
-    private void WriteAnalysisInfo(CsvTableBuilder builder, AnalysisOutcome outcome)
+    private static void WriteAnalysisInfo(CsvTableBuilder builder, AnalysisOutcome outcome)
     {
         builder.Record([Section.Bracketed.Analysis]);
 
@@ -44,7 +44,7 @@ internal sealed class CsvReportWriter(
         builder.Record([]);
     }
 
-    private void WriteAssemblyMetadata(CsvTableBuilder builder, IEnumerable<AssemblyMetadata> metadataList)
+    private static void WriteAssemblyMetadata(CsvTableBuilder builder, IEnumerable<AssemblyMetadata> metadataList)
     {
         builder.Record([Section.Bracketed.AssemblyMetadataList]);
 
@@ -70,7 +70,7 @@ internal sealed class CsvReportWriter(
         builder.Record([]);
     }
 
-    private void WritePInvokeGroups(CsvTableBuilder builder, IEnumerable<PInvokeMethodGroup> groups)
+    private static void WritePInvokeGroups(CsvTableBuilder builder, IEnumerable<PInvokeMethodGroup> groups)
     {
         builder.Record([Section.Bracketed.PInvokeMethodGroups]);
 
@@ -111,7 +111,7 @@ internal sealed class CsvReportWriter(
         builder.Record([]);
     }
 
-    private void WriteLibraryResolutionResults(
+    private static void WriteLibraryResolutionResults(
         CsvTableBuilder builder,
         IEnumerable<LibraryResolution> libraryResolutions)
     {
@@ -145,7 +145,7 @@ internal sealed class CsvReportWriter(
         builder.Record([]);
     }
 
-    private void WriteSummary(CsvTableBuilder builder, AnalysisSummary summary)
+    private static void WriteSummary(CsvTableBuilder builder, AnalysisSummary summary)
     {
         builder.Record([Section.Bracketed.Summary]);
 
@@ -174,14 +174,18 @@ internal sealed class CsvReportWriter(
         builder.Record([]);
     }
 
-    private string SerializeValue(object? value)
+    private static string SerializeValue(object? value)
     {
         if (value is IEnumerable<string> stringList)
         {
             return EscapeValue(JsonSerializer.Serialize(stringList));
         }
 
-        return EscapeValue(value is bool boolean ? XmlConvert.ToString(boolean) : value?.ToString());
+        return EscapeValue(
+            value is bool boolean 
+                ? XmlConvert.ToString(boolean)
+                : value?.ToString()
+        );
     }
 
     private static string EscapeValue(string? value)

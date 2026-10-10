@@ -87,14 +87,14 @@ internal sealed class LinuxLibraryResolutionResolver(
         }
 
         var ldLibraryPathDirectories = SplitSearchPath(
-                ldLibraryPath,
-                true,
-                false,
-                ':',
-                ';'
-            )
-            .Where(path => !ContainsDynamicStringToken(path))
-            .ToArray();
+            ldLibraryPath,
+            true,
+            false,
+            ':',
+            ';'
+        )
+        .Where(path => !ContainsDynamicStringToken(path))
+        .ToArray();
 
         foreach (var candidate in candidates)
         {

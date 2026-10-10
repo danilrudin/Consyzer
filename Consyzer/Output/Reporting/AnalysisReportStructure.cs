@@ -2,9 +2,9 @@ using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
 
-namespace Consyzer.Output;
+namespace Consyzer.Output.Reporting;
 
-internal static class AnalysisOutputStructure
+internal static class AnalysisReportStructure
 {
     public static class Section
     {

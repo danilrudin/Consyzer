@@ -6,7 +6,7 @@ using Consyzer.Output.Builders;
 using Consyzer.Core.Models.Analysis;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
-using static Consyzer.Output.AnalysisOutputStructure;
+using static Consyzer.Output.Reporting.AnalysisReportStructure;
 
 namespace Consyzer.Output.Reporting;
 
@@ -118,7 +118,7 @@ internal sealed class ConsoleReportWriter(
                 b.Line(
                     Label.Library.NotSimulated,
                     libraryResolution.NotSimulated == NotSimulatedMechanisms.None
-                        ? "None"
+                        ? NotSimulatedMechanisms.None.ToString()
                         : libraryResolution.NotSimulated);
             })
             .PopIndent();

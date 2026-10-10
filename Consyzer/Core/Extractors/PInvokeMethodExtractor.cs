@@ -82,8 +82,7 @@ internal sealed class PInvokeMethodExtractor(
     private static bool HasAttribute<TAttribute>(
         MetadataReader mdReader,
         CustomAttributeHandleCollection attributes
-    )
-        where TAttribute : Attribute
+    ) where TAttribute : Attribute
     {
         var expectedType = typeof(TAttribute);
 
@@ -110,7 +109,8 @@ internal sealed class PInvokeMethodExtractor(
                 && mdReader.StringComparer.Equals(
                     attributeType.Namespace,
                     expectedType.Namespace!
-                ))
+                )
+            )
             {
                 return true;
             }

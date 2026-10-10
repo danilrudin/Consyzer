@@ -9,14 +9,21 @@ internal sealed class AnalysisLogBuilder(
     IOptions<AppSettingsOptions> options
 ) : IAnalysisLogBuilder
 {
+    private const string CommandLineOptionsHeader = $"[{nameof(CommandLineOptions)}]";
+    private const string FilesFoundHeader = "[FilesFound]";
+    private const string FileClassificationHeader = $"[{nameof(AnalysisFileClassification)}]";
+    private const string NonEcmaModulesHeader = $"[{nameof(AnalysisFileClassification.NonEcmaModules)}]";
+    private const string NonEcmaAssembliesHeader = $"[{nameof(AnalysisFileClassification.NonEcmaAssemblies)}]";
+    private const string EcmaAssembliesHeader = $"[{nameof(AnalysisFileClassification.EcmaAssemblies)}]";
+
     private readonly AppSettingsOptions.OutputOptions.ConsoleOptions _options = options.Value.Output.Console;
 
     public string BuildAnalysisOptionsLog(CommandLineOptions options) =>
         new IndentedTextBuilder(_options.IndentChars)
-            .Title(Section.Bracketed.AnalysisOptions)
+            .Title(CommandLineOptionsHeader)
             .PushIndent()
-            .Line(Label.Options.AnalysisDirectory, options.AnalysisDirectory)
-            .Line(Label.Options.SearchPatterns, options.SearchPatterns)
+            .Line(nameof(CommandLineOptions.AnalysisDirectory), options.AnalysisDirectory)
+            .Line(nameof(CommandLineOptions.SearchPatterns), options.SearchPatterns)
             .Line(nameof(CommandLineOptions.RecursiveSearch), options.RecursiveSearch)
             .Line(nameof(CommandLineOptions.ReportFormats), options.ReportFormats)
             .PopIndent()
@@ -24,7 +31,7 @@ internal sealed class AnalysisLogBuilder(
 
     public string BuildFoundFilesLog(IEnumerable<FileInfo> files) =>
         new IndentedTextBuilder(_options.IndentChars)
-            .Title($"{Section.Bracketed.FilesFound} Count: {files.Count()}")
+            .Title($"{FilesFoundHeader} Count: {files.Count()}")
             .PushIndent()
             .IndexedItems(files, f => f.FullName)
             .PopIndent()
@@ -32,50 +39,18 @@ internal sealed class AnalysisLogBuilder(
 
     public string BuildFileClassificationLog(AnalysisFileClassification fileClassification) =>
         new IndentedTextBuilder(_options.IndentChars)
-            .Title(Section.Bracketed.FileClassification)
+            .Title(FileClassificationHeader)
             .PushIndent()
-            .Title($"{Section.Bracketed.NotEcma} Count: {fileClassification.NonEcmaModules.Count}")
+            .Title($"{NonEcmaModulesHeader} Count: {fileClassification.NonEcmaModules.Count}")
             .IndexedItems(fileClassification.NonEcmaModules, f => f.FullName)
             .PopIndent()
             .PushIndent()
-            .Title($"{Section.Bracketed.NotAssemblies} Count: {fileClassification.NonEcmaAssemblies.Count}")
+            .Title($"{NonEcmaAssembliesHeader} Count: {fileClassification.NonEcmaAssemblies.Count}")
             .IndexedItems(fileClassification.NonEcmaAssemblies, f => f.FullName)
             .PopIndent()
             .PushIndent()
-            .Title($"{Section.Bracketed.EcmaAssemblies} Count: {fileClassification.EcmaAssemblies.Count}")
+            .Title($"{EcmaAssembliesHeader} Count: {fileClassification.EcmaAssemblies.Count}")
             .IndexedItems(fileClassification.EcmaAssemblies, f => f.FullName)
             .PopIndent()
             .Build();
-
-    private static class Section
-    {
-        public static class Name
-        {
-            public const string AnalysisOptions = nameof(CommandLineOptions);
-            public const string FilesFound = "FilesFound";
-            public const string FileClassification = nameof(AnalysisFileClassification);
-            public const string NotEcma = nameof(AnalysisFileClassification.NonEcmaModules);
-            public const string NotAssemblies = nameof(AnalysisFileClassification.NonEcmaAssemblies);
-            public const string EcmaAssemblies = nameof(AnalysisFileClassification.EcmaAssemblies);
-        }
-
-        public static class Bracketed
-        {
-            public const string AnalysisOptions = $"[{Name.AnalysisOptions}]";
-            public const string FilesFound = $"[{Name.FilesFound}]";
-            public const string FileClassification = $"[{Name.FileClassification}]";
-            public const string NotEcma = $"[{Name.NotEcma}]";
-            public const string NotAssemblies = $"[{Name.NotAssemblies}]";
-            public const string EcmaAssemblies = $"[{Name.EcmaAssemblies}]";
-        }
-    }
-
-    private static class Label
-    {
-        public static class Options
-        {
-            public const string AnalysisDirectory = nameof(CommandLineOptions.AnalysisDirectory);
-            public const string SearchPatterns = nameof(CommandLineOptions.SearchPatterns);
-        }
-    }
 }
