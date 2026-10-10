@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Consyzer.Core.Models.Resolution;
 using Consyzer.Core.Resolvers.Platform;
+using Consyzer.Tests.TestSupport;
 using Consyzer.Tests.TestSupport.Collections;
 using Consyzer.Tests.TestSupport.FileSystem;
 using Consyzer.Tests.TestSupport.Scopes;
@@ -25,18 +26,20 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         _resolver = new LinuxLibraryResolutionResolver(_analysisDirectory.Path);
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("consyzer_linux_plain", "consyzer_linux_plain.so")]
     [InlineData("libconsyzer_linux_plain", "libconsyzer_linux_plain.so")]
     [InlineData("consyzer_linux_plain.so", "consyzer_linux_plain.so")]
     [InlineData("libconsyzer_linux_plain.so", "libconsyzer_linux_plain.so")]
+    [InlineData("consyzer_linux_name_variation", "libconsyzer_linux_name_variation.so")]
+    [InlineData("consyzer_versioned.so.6", "libconsyzer_versioned.so.6.so")]
+    [InlineData("consyzer_exact_versioned.so.6", "consyzer_exact_versioned.so.6")]
+    [InlineData("libconsyzer_already_prefixed.so", "liblibconsyzer_already_prefixed.so")]
     public void Resolve_ShouldUseExpectedLinuxNameVariation(
         string requestedName,
         string physicalName
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         var libraryFile = _environmentDirectory.CreateFile(physicalName, TestFileContent);
         using var pathScope = new EnvironmentVariableScope(
             LdLibraryPathVariableName,
@@ -53,7 +56,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("consyzer.something.so")]
     [InlineData("consyzer.something.so.6")]
     [InlineData("native.something/consyzer.so")]
@@ -61,8 +64,6 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         string requestedName
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         var exactPath = Path.Combine(_analysisDirectory.Path, requestedName);
         Directory.CreateDirectory(Path.GetDirectoryName(exactPath)!);
         File.WriteAllText(exactPath, TestFileContent);
@@ -75,37 +76,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         AssertResolved(result, requestedName, MechanismKind.AssemblyDirectory, expectedPath);
     }
 
-    [Fact]
-    public void Resolve_ShouldUseCanonicalAndLibPrefixedName_WhenNameHasNoExtension()
-    {
-        if (!OperatingSystem.IsLinux()) return;
-
-        const string requestedName = "consyzer_linux_name_variation";
-        var libraryFile = _environmentDirectory.CreateFile(
-            "lib" + requestedName + ".so",
-            TestFileContent
-        );
-
-        using var pathScope = new EnvironmentVariableScope(
-            LdLibraryPathVariableName,
-            _environmentDirectory.Path
-        );
-
-        var result = Resolve(requestedName);
-
-        AssertResolved(
-            result,
-            requestedName,
-            MechanismKind.EnvironmentOverride,
-            libraryFile.FullName
-        );
-    }
-
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldCompleteSearchForFirstNameVariationBeforeTryingNextVariation()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_variation_precedence";
         var environmentLibrary = _environmentDirectory.CreateFile(
             requestedName + ".so",
@@ -131,89 +104,13 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
-    public void Resolve_ShouldTryCanonicalSuffixAfterVersionedSharedObjectName()
-    {
-        if (!OperatingSystem.IsLinux()) return;
-
-        const string requestedName = "consyzer_versioned.so.6";
-        var libraryFile = _environmentDirectory.CreateFile(
-            "lib" + requestedName + ".so",
-            TestFileContent
-        );
-
-        using var pathScope = new EnvironmentVariableScope(
-            LdLibraryPathVariableName,
-            _environmentDirectory.Path
-        );
-
-        var result = Resolve(requestedName);
-
-        AssertResolved(
-            result,
-            requestedName,
-            MechanismKind.EnvironmentOverride,
-            libraryFile.FullName
-        );
-    }
-
-    [Fact]
-    public void Resolve_ShouldUseExactVersionedSharedObjectName()
-    {
-        if (!OperatingSystem.IsLinux()) return;
-
-        const string requestedName = "consyzer_exact_versioned.so.6";
-        var libraryFile = _environmentDirectory.CreateFile(requestedName, TestFileContent);
-        using var pathScope = new EnvironmentVariableScope(
-            LdLibraryPathVariableName,
-            _environmentDirectory.Path
-        );
-
-        var result = Resolve(requestedName);
-
-        AssertResolved(
-            result,
-            requestedName,
-            MechanismKind.EnvironmentOverride,
-            libraryFile.FullName
-        );
-    }
-
-    [Fact]
-    public void Resolve_ShouldStillTryLibPrefix_WhenDeclaredNameAlreadyStartsWithLib()
-    {
-        if (!OperatingSystem.IsLinux()) return;
-
-        const string requestedName = "libconsyzer_already_prefixed.so";
-        var libraryFile = _environmentDirectory.CreateFile(
-            "lib" + requestedName,
-            TestFileContent
-        );
-
-        using var pathScope = new EnvironmentVariableScope(
-            LdLibraryPathVariableName,
-            _environmentDirectory.Path
-        );
-
-        var result = Resolve(requestedName);
-
-        AssertResolved(
-            result,
-            requestedName,
-            MechanismKind.EnvironmentOverride,
-            libraryFile.FullName
-        );
-    }
-
-    [Theory]
+    [LinuxTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void Resolve_ShouldReturnResolvedWithExplicitPath_WhenAbsolutePathExists(
         bool hasDllImportSearchPathOverride
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         var libraryFile = _environmentDirectory.CreateFile(
             "libconsyzer_explicit.so",
             TestFileContent
@@ -233,15 +130,13 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void Resolve_ShouldReturnMissing_WhenAbsolutePathDoesNotExist(
         bool hasDllImportSearchPathOverride
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         var missingPath = Path.Combine(
             _environmentDirectory.Path,
             "libconsyzer_missing_explicit.so"
@@ -259,11 +154,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldUseSoVariationForRelativeExplicitPath()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedBaseName = "consyzer_relative_explicit";
         using var currentDirectory = new TemporaryDirectory("consyzer-linux-explicit-");
         var relativeDirectory = Directory.CreateDirectory(
@@ -288,7 +181,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("consyzer_relative", "consyzer_relative.so")]
     [InlineData("consyzer_relative.so", "consyzer_relative.so")]
     [InlineData("consyzer_relative.so.6", "consyzer_relative.so.6")]
@@ -297,8 +190,6 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         string physicalName
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         using var targetDirectory = new TemporaryDirectory(
             "consyzer-linux-target-",
             _analysisDirectory.Path
@@ -327,11 +218,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.Equal(targetFile.FullName, result.TargetPath);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldCompleteSearchForFirstRelativePathVariationBeforeTryingNext()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedBaseName = "consyzer_relative_variation_precedence";
         using var currentDirectory = new TemporaryDirectory("consyzer-linux-explicit-");
         var targetNativeDirectory = Directory.CreateDirectory(
@@ -358,15 +247,13 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         AssertResolved(result, requestedPath, MechanismKind.ExplicitPath, libraryPath);
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void Resolve_ShouldReturnInconclusiveForRelativePathWithSearchOverride(
         bool libraryExists
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string libraryName = "consyzer_relative_override.so";
         using var currentDirectory = new TemporaryDirectory("consyzer-linux-explicit-");
         if (libraryExists)
@@ -392,11 +279,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.Equal(NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides, result.NotSimulated);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldNotFallbackToLdLibraryPath_WhenRelativeExplicitPathIsMissing()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedBaseName = "consyzer_explicit_no_fallback";
         using var currentDirectory = new TemporaryDirectory("consyzer-linux-explicit-");
         var environmentSubdirectory = Directory.CreateDirectory(
@@ -421,13 +306,11 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.Equal(NotSimulatedMechanisms.LinuxDotNetSearchPathOverrides, result.NotSimulated);
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData(" ")]
     [InlineData("\t")]
     public void Resolve_ShouldPreserveWhitespaceDirectoryInLdLibraryPath(string directoryName)
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_whitespace_directory";
         using var currentDirectory = new TemporaryDirectory("consyzer-linux-whitespace-");
         var nativeDirectory = Directory.CreateDirectory(Path.Combine(currentDirectory.Path, directoryName));
@@ -441,7 +324,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         AssertResolved(result, requestedName, MechanismKind.EnvironmentOverride, libraryPath);
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData(":")]
     [InlineData(";")]
     [InlineData(";:")]
@@ -449,8 +332,6 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         string separators
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_current_directory";
         using var currentDirectory = new TemporaryDirectory("consyzer-linux-current-");
         var libraryFile = currentDirectory.CreateFile(requestedName + ".so", TestFileContent);
@@ -470,7 +351,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData(":", ":")]
     [InlineData(";", ";")]
     [InlineData(":", ";")]
@@ -480,8 +361,6 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         string secondSeparator
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_semicolon_path";
         using var unusedDirectory = new TemporaryDirectory("consyzer-linux-unused-");
         using var fallbackDirectory = new TemporaryDirectory("consyzer-linux-fallback-");
@@ -505,11 +384,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldNotTrimQuotesFromLdLibraryPathEntry()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_quoted_path";
         var libraryFile = _environmentDirectory.CreateFile(
             requestedName + ".so",
@@ -528,7 +405,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.DoesNotContain(libraryFile.FullName, result.HeuristicCandidates);
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("$ORIGIN/libconsyzer_token.so")]
     [InlineData("${LIB}/libconsyzer_token.so")]
     [InlineData("$PLATFORM/libconsyzer_token.so")]
@@ -536,8 +413,6 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         string requestedName
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         var result = Resolve(requestedName);
 
         Assert.Equal(ResolutionState.Inconclusive, result.ResolutionState);
@@ -549,11 +424,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldNotProbeTokenizedLdLibraryPathEntryAsLiteralDirectory()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_literal_token_directory";
         using var currentDirectory = new TemporaryDirectory("consyzer-linux-token-cwd-");
         var literalTokenDirectory = Directory.CreateDirectory(
@@ -580,7 +453,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("$ORIGIN")]
     [InlineData("${LIB}")]
     [InlineData("$PLATFORM")]
@@ -588,8 +461,6 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         string token
     )
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_dynamic_token";
         var libraryFile = _environmentDirectory.CreateFile(requestedName + ".so", TestFileContent);
         var value = token + Path.PathSeparator + _environmentDirectory.Path;
@@ -611,11 +482,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldReturnResolvedWithAssemblyDirectory_WhenLibraryIsNextToTarget()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_adjacent_library";
         using var nestedDirectory = new TemporaryDirectory(
             "consyzer-linux-target-",
@@ -637,11 +506,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldReturnInconclusive_WhenSearchPathOverrideIsPresent()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_ignored_search_path_attribute";
         _analysisDirectory.CreateFile(
             requestedName + ".so",
@@ -666,11 +533,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         ));
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldComparePhysicalFileNamesCaseSensitively()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         _environmentDirectory.CreateFile("Consyzer_Case_Sensitive.so", TestFileContent);
         using var pathScope = new EnvironmentVariableScope(
             LdLibraryPathVariableName,
@@ -683,11 +548,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.Null(result.ResolvedPresence);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldUseMultiarchDirectoryForCurrentArchitecture()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         var multiarchDirectory = RuntimeInformation.ProcessArchitecture switch
         {
             Architecture.X64 => "/lib/x86_64-linux-gnu",
@@ -720,11 +583,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldReportAnalysisDirectoryCandidateAsHeuristic_WhenTargetIsNested()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         const string requestedName = "consyzer_analysis_directory_heuristic";
         using var nestedDirectory = new TemporaryDirectory(
             "consyzer-linux-target-",
@@ -747,11 +608,9 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.NotEqual(NotSimulatedMechanisms.None, result.NotSimulated);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Resolve_ShouldReturnInconclusiveWithKnownLoaderGaps_WhenLibraryIsNotFound()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         using var pathScope = new EnvironmentVariableScope(LdLibraryPathVariableName, null);
 
         var result = Resolve("consyzer_library_that_does_not_exist");
@@ -783,7 +642,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
         Assert.Equal(libraryName, result.LibraryName);
         Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
         Assert.NotNull(result.ResolvedPresence);
-        Assert.Equal(mechanismKind, result.ResolvedPresence!.MechanismKind);
+        Assert.Equal(mechanismKind, result.ResolvedPresence.MechanismKind);
         Assert.Equal(Path.GetFullPath(resolvedPath), result.ResolvedPresence.Path);
     }
 }

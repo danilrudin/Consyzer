@@ -3,17 +3,16 @@ using Consyzer.Application.Analyzers;
 using Consyzer.Core.Models.Metadata;
 using Consyzer.Core.Models.Resolution;
 using Consyzer.Core.Resolvers;
+using Consyzer.Tests.TestSupport;
 using Consyzer.Tests.TestSupport.FileSystem;
 
 namespace Consyzer.Tests.Application.Analyzers;
 
 public sealed class LibraryResolutionAnalyzerTests
 {
-    [Fact]
+    [LinuxFact]
     public void Analyze_ShouldKeepCaseDistinctLibraryNames_OnLinux()
     {
-        if (!OperatingSystem.IsLinux()) return;
-
         using var directory = new TemporaryDirectory("consyzer-library-analyzer-");
         var targetFile = directory.CreateFile("Target.dll");
         var analyzer = CreateAnalyzer(directory.Path);
@@ -26,11 +25,9 @@ public sealed class LibraryResolutionAnalyzerTests
         Assert.Equal(2, outcome.Results.Count);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Analyze_ShouldDeduplicateLibraryNamesIgnoringCase_OnWindows()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var directory = new TemporaryDirectory("consyzer-library-analyzer-");
         var targetFile = directory.CreateFile("Target.dll");
         var analyzer = CreateAnalyzer(directory.Path);
@@ -43,11 +40,9 @@ public sealed class LibraryResolutionAnalyzerTests
         Assert.Single(outcome.Results);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Analyze_ShouldApplySearchPathOverrideToDeduplicatedDependency_OnWindows()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string libraryName = "consyzer_search_path_override.dll";
         using var directory = new TemporaryDirectory("consyzer-library-analyzer-");
         var targetFile = directory.CreateFile("Target.dll");

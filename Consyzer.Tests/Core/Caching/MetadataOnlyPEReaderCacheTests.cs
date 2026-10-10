@@ -1,4 +1,4 @@
-﻿using Consyzer.Core.Caching;
+using Consyzer.Core.Caching;
 using static Consyzer.Tests.TestSupport.Samples.TestFiles;
 
 namespace Consyzer.Tests.Core.Caching;
@@ -20,24 +20,14 @@ public sealed class MetadataOnlyPEReaderCacheTests
     public void GetOrAdd_ShouldReturnCachedPEReader_WhenCalledMultipleTimesWithSameFile()
     {
         using var cache = new MetadataOnlyPEReaderCache();
+        var file = AssemblyWithPInvoke;
 
-        var reader1 = cache.GetOrAdd(AssemblyWithPInvoke);
-        var reader2 = cache.GetOrAdd(AssemblyWithPInvoke);
-
-        Assert.Same(reader1, reader2);
-    }
-
-    [Fact]
-    public void GetOrAdd_ShouldReturnCachedPEReader_WhenCalledWithDifferentFileInfoForSamePath()
-    {
-        using var cache = new MetadataOnlyPEReaderCache();
-
-        var sameFile = new FileInfo(AssemblyWithPInvoke.FullName);
-
-        var reader1 = cache.GetOrAdd(AssemblyWithPInvoke);
-        var reader2 = cache.GetOrAdd(sameFile);
+        var reader1 = cache.GetOrAdd(file);
+        var reader2 = cache.GetOrAdd(file);
+        var reader3 = cache.GetOrAdd(new FileInfo(file.FullName));
 
         Assert.Same(reader1, reader2);
+        Assert.Same(reader1, reader3);
     }
 
     [Fact]

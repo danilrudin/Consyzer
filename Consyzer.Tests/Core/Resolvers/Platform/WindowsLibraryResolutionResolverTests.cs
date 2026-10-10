@@ -1,6 +1,7 @@
 using Consyzer.Core.Models.Resolution;
 using Consyzer.Core.Resolvers.Platform;
 using Consyzer.Tests.TestSupport.Scopes;
+using Consyzer.Tests.TestSupport;
 using Consyzer.Tests.TestSupport.FileSystem;
 using Consyzer.Tests.TestSupport.Collections;
 
@@ -40,11 +41,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         _resolver = new WindowsLibraryResolutionResolver(_analyzedDirectory.Path);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnResolvedWithAssemblyDirectory_WhenLibraryExistsNextToTarget()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         var libraryFile = _analyzedDirectory.CreateFile(AssemblyDirectoryLibraryName, TestFileContent);
 
         var result = Resolve(AssemblyDirectoryLibraryName);
@@ -52,11 +51,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         AssertResolved(result, AssemblyDirectoryLibraryName, MechanismKind.AssemblyDirectory, libraryFile.FullName);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldComparePhysicalFileNamesCaseInsensitively()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string requestedName = "consyzer_case_insensitive.dll";
         _analyzedDirectory.CreateFile(
             "Consyzer_Case_Insensitive.dll",
@@ -73,11 +70,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnInconclusive_WhenSearchPathOverrideIsPresent()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         _analyzedDirectory.CreateFile(AssemblyDirectoryLibraryName, TestFileContent);
 
         var result = _resolver.Resolve(new LibraryResolutionContext(
@@ -93,14 +88,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         ));
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldPreferSystemDirectoryOverCurrentDirectoryAndPath()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var systemDirectory = Environment.SystemDirectory;
         var libraryName = Directory.GetFiles(systemDirectory)
             .Select(Path.GetFileName)
@@ -124,11 +114,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnResolvedWithDefaultSystemLocations_WhenLibraryExistsInWindowsDirectory()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         var systemDirectory = Environment.SystemDirectory;
         var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
         var libraryPath = Directory
@@ -149,11 +137,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnResolvedWithEnvironmentOverride_WhenLibraryExistsInPath()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         var libraryFile = _envPathDirectory.CreateFile(EnvironmentPathLibraryName, TestFileContent);
         var path = _envPathDirectory.Path + Path.PathSeparator + Environment.GetEnvironmentVariable(PathVariableName);
 
@@ -164,11 +150,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         AssertResolved(result, EnvironmentPathLibraryName, MechanismKind.EnvironmentOverride, libraryFile.FullName);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldAppendDllExtension_WhenLibraryNameHasNoExtension()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         var libraryFile = _analyzedDirectory.CreateFile(
             InferredExtensionLibraryBaseName + NativeLibraryExtension,
             TestFileContent
@@ -184,11 +168,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldCompleteSearchForExactNameBeforeTryingDllVariation()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string requestedName = "consyzer_variation_precedence.native";
         using var currentDirectory = new TemporaryDirectory("consyzer-variation-current-");
         var exactLibrary = currentDirectory.CreateFile(requestedName, TestFileContent);
@@ -205,11 +187,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldNotTreatExtensionlessFileAsPhysicalDll_WhenNameHasNoExtension()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string requestedName = "consyzer_extensionless_file";
         _analyzedDirectory.CreateFile(requestedName, TestFileContent);
 
@@ -219,11 +199,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         Assert.Null(result.ResolvedPresence);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldUseDllFile_WhenAbsolutePathHasNoExtension()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string requestedBaseName = "consyzer_absolute_without_extension";
         using var directory = new TemporaryDirectory(AbsolutePathDirectoryPrefix);
         var libraryFile = directory.CreateFile(
@@ -242,11 +220,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldUseDllVariationForRelativeExplicitPath()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string requestedBaseName = "consyzer_relative_without_extension";
         using var relativeDirectory = new TemporaryDirectory(
             RelativePathDirectoryPrefix,
@@ -268,11 +244,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnResolvedWithCurrentDirectory_WhenLibraryExistsThere()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var currentDirectory = new TemporaryDirectory(RelativePathDirectoryPrefix);
         var libraryFile = currentDirectory.CreateFile(CurrentDirectoryLibraryName, TestFileContent);
         using var currentDirectoryScope = new CurrentDirectoryScope(currentDirectory.Path);
@@ -287,11 +261,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnResolvedWithAssemblyDirectory_WhenTargetIsNested()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var nestedDirectory = new TemporaryDirectory(
             "consyzer-nested-",
             _analyzedDirectory.Path
@@ -312,11 +284,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReportAnalysisDirectoryCandidateAsHeuristic_WhenTargetIsNested()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var nestedDirectory = new TemporaryDirectory(
             "consyzer-nested-",
             _analyzedDirectory.Path
@@ -337,11 +307,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         Assert.NotEqual(NotSimulatedMechanisms.None, result.NotSimulated);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldNotAppendDllExtension_WhenNameEndsWithDot()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string requestedName = "consyzer_trailing_dot.";
         _analyzedDirectory.CreateFile(requestedName + ".dll", TestFileContent);
 
@@ -351,31 +319,20 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         Assert.Null(result.ResolvedPresence);
     }
 
-    [Fact]
-    public void Resolve_ShouldReturnResolvedWithExplicitPath_WhenLibraryExistsAtAbsolutePath()
+    [WindowsTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Resolve_ShouldReturnResolvedWithExplicitPath_WhenLibraryExistsAtAbsolutePath(
+        bool hasDllImportSearchPathOverride
+    )
     {
-        if (!OperatingSystem.IsWindows()) return;
-
-        using var directory = new TemporaryDirectory(AbsolutePathDirectoryPrefix);
-        var libraryFile = directory.CreateFile(AbsolutePathLibraryName, TestFileContent);
-
-        var result = Resolve(libraryFile.FullName);
-
-        AssertResolved(result, libraryFile.FullName, MechanismKind.ExplicitPath, libraryFile.FullName);
-    }
-
-    [Fact]
-    public void Resolve_ShouldReturnResolvedForAbsolutePath_WhenSearchPathOverrideIsPresent()
-    {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var directory = new TemporaryDirectory(AbsolutePathDirectoryPrefix);
         var libraryFile = directory.CreateFile(AbsolutePathLibraryName, TestFileContent);
 
         var result = _resolver.Resolve(new LibraryResolutionContext(
             _targetFile,
             libraryFile.FullName,
-            HasDllImportSearchPathOverride: true
+            hasDllImportSearchPathOverride
         ));
 
         AssertResolved(
@@ -386,11 +343,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnResolvedWithExplicitPath_WhenLibraryExistsAtRelativePath()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var relativeDirectory = new TemporaryDirectory(RelativePathDirectoryPrefix, Directory.GetCurrentDirectory());
         var libraryFile = relativeDirectory.CreateFile(RelativePathLibraryName, TestFileContent);
         var relativeRequestPath = Path.Combine(relativeDirectory.Directory.Name, RelativePathLibraryName);
@@ -400,11 +355,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         AssertResolved(result, relativeRequestPath, MechanismKind.ExplicitPath, libraryFile.FullName);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldSearchAssemblyDirectoryForRelativePath()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string directoryName = "native";
         var subdirectory = Directory.CreateDirectory(
             Path.Combine(_analyzedDirectory.Path, directoryName)
@@ -423,11 +376,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnInconclusiveForRelativePath_WhenSearchPathOverrideIsPresent()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var relativeDirectory = new TemporaryDirectory(
             RelativePathDirectoryPrefix,
             Directory.GetCurrentDirectory()
@@ -451,11 +402,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         ));
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldSearchPathForRelativePath()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         const string directoryName = "native";
         using var currentDirectory = new TemporaryDirectory(
             "consyzer-relative-missing-"
@@ -483,15 +432,13 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         );
     }
 
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void Resolve_ShouldBeInconclusiveWhenRelativePathIsNotFound(
         bool hasDllImportSearchPathOverride
     )
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var currentDirectory = new TemporaryDirectory("consyzer-relative-missing-");
         using var currentDirectoryScope = new CurrentDirectoryScope(currentDirectory.Path);
         using var pathScope = new EnvironmentVariableScope(
@@ -510,15 +457,13 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         Assert.NotEqual(NotSimulatedMechanisms.None, result.NotSimulated);
     }
 
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void Resolve_ShouldReportRedirectionUncertainty_WhenAbsolutePathDoesNotExist(
         bool hasDllImportSearchPathOverride
     )
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         using var directory = new TemporaryDirectory(AbsolutePathDirectoryPrefix);
         var missingPath = Path.Combine(directory.Path, "consyzer_missing_explicit.dll");
 
@@ -534,11 +479,9 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         Assert.Equal(NotSimulatedMechanisms.WindowsDllRedirection, result.NotSimulated);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Resolve_ShouldReturnInconclusive_WhenLibraryIsNotFound()
     {
-        if (!OperatingSystem.IsWindows()) return;
-
         var result = Resolve(MissingLibraryName);
 
         Assert.Equal(_targetFile.FullName, result.TargetPath);
@@ -572,7 +515,7 @@ public sealed class WindowsLibraryResolutionResolverTests : IDisposable
         Assert.Equal(libraryName, result.LibraryName);
         Assert.Equal(ResolutionState.Resolved, result.ResolutionState);
         Assert.NotNull(result.ResolvedPresence);
-        Assert.Equal(mechanismKind, result.ResolvedPresence!.MechanismKind);
+        Assert.Equal(mechanismKind, result.ResolvedPresence.MechanismKind);
         Assert.Equal(Path.GetFullPath(resolvedPath), result.ResolvedPresence.Path);
         Assert.Empty(result.HeuristicCandidates);
         Assert.Equal(NotSimulatedMechanisms.None, result.NotSimulated);

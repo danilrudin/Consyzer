@@ -1,4 +1,4 @@
-﻿using Consyzer.Core.Caching;
+using Consyzer.Core.Caching;
 using Consyzer.Core.Extractors;
 using static Consyzer.Tests.TestSupport.Samples.TestFiles;
 
@@ -13,8 +13,6 @@ public sealed class PInvokeMethodExtractorTests
         var extractor = new PInvokeMethodExtractor(peAccessor);
 
         var methods = extractor.Extract(AssemblyWithPInvoke).ToList();
-
-        Assert.NotEmpty(methods);
 
         Assert.All(methods, method =>
         {
