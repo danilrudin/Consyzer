@@ -2,8 +2,8 @@ name: Build
 
 on:
   push:
+    branches: ['**']
   pull_request:
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -12,205 +12,156 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
+concurrency:
+  group: build-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  linux-tests:
-    name: Linux build and tests
-    runs-on: ubuntu-latest
-
+  ci:
+    name: ${{ matrix.platform }} CI
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux
+            runner: ubuntu-latest
+            rid: linux-x64
+          - platform: Windows
+            runner: windows-latest
+            rid: win-x64
+    defaults:
+      run:
+        shell: pwsh
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
-
-      - name: Restore
-        run: dotnet restore Consyzer.slnx
-
-      - name: Build
-        run: dotnet build Consyzer.slnx --configuration Release --no-restore
-
-      - name: Test
+      - name: Build and test with coverage
         run: >-
-          dotnet test Consyzer.Tests/Consyzer.Tests.csproj
-          --configuration Release
-          --no-build
-          --no-restore
-          --settings coverlet.runsettings
-          --collect:"XPlat Code Coverage"
-          --results-directory "$GITHUB_WORKSPACE/TestResults/collected"
-
-      - name: Upload Linux coverage
+          dotnet test Consyzer.slnx -c Release -warnaserror
+          --settings coverlet.runsettings --collect:"XPlat Code Coverage"
+          --logger trx --results-directory TestResults/collected
+      - name: Normalize coverage source paths
+        run: |
+          $root = (Get-Location).Path
+          Get-ChildItem TestResults/collected -Recurse -Filter coverage.opencover.xml | ForEach-Object {
+            [xml]$report = Get-Content -LiteralPath $_.FullName -Raw
+            foreach ($file in $report.SelectNodes('//File')) {
+              $file.fullPath = [IO.Path]::GetRelativePath($root, $file.fullPath).Replace('\', '/')
+            }
+            $report.Save($_.FullName)
+          }
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: Consyzer-linux-coverage
+          name: coverage-${{ matrix.rid }}
           path: TestResults/collected/**/coverage.opencover.xml
           if-no-files-found: error
-
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-${{ matrix.rid }}
+          path: TestResults/collected/**/*.trx
+          if-no-files-found: warn
       - name: Publish
         run: >-
-          dotnet publish Consyzer/Consyzer.csproj
-          --configuration Release
-          --no-build
-          --self-contained false
-          --output _publish/Consyzer
-
-      - name: Package application
-        run: tar -czf _publish/Consyzer-linux.tar.gz -C _publish/Consyzer .
-
-      - name: Upload application
+          dotnet publish Consyzer/Consyzer.csproj -c Release
+          --runtime ${{ matrix.rid }} --self-contained false
+          --output artifacts/publish -warnaserror
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/Consyzer-win-x64.zip
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: tar -czf artifacts/Consyzer-linux-x64.tar.gz -C artifacts/publish .
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Consyzer-linux
-          path: _publish/Consyzer-linux.tar.gz
+          name: Consyzer-${{ matrix.rid }}
+          path: |
+            artifacts/Consyzer-*.zip
+            artifacts/Consyzer-*.tar.gz
           if-no-files-found: error
 
-  windows-tests:
-    name: Windows build and tests
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Restore
-        run: dotnet restore Consyzer.slnx
-
-      - name: Build
-        run: dotnet build Consyzer.slnx --configuration Release --no-restore
-
-      - name: Test with coverage
-        run: >-
-          dotnet test Consyzer.Tests/Consyzer.Tests.csproj
-          --configuration Release
-          --no-build
-          --no-restore
-          --settings coverlet.runsettings
-          --collect:"XPlat Code Coverage"
-          --results-directory "$env:GITHUB_WORKSPACE\TestResults\collected"
-
-      - name: Upload Windows coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: Consyzer-windows-coverage
-          path: TestResults/collected/**/coverage.opencover.xml
-          if-no-files-found: error
-
-      - name: Publish
-        run: >-
-          dotnet publish Consyzer/Consyzer.csproj
-          --configuration Release
-          --no-build
-          --self-contained false
-          --output _publish/Consyzer
-
-      - name: Upload application
-        uses: actions/upload-artifact@v4
-        with:
-          name: Consyzer-windows
-          path: _publish/Consyzer
-          if-no-files-found: error
-
-  sonar-analysis:
-    name: SonarCloud analysis
+  analysis:
+    name: SonarCloud
+    needs: ci
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    needs: [linux-tests, windows-tests]
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
+    defaults:
+      run:
+        shell: pwsh
     steps:
-      - name: Checkout
-        if: env.SONAR_TOKEN != ''
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
-
-      - name: Set up .NET 10
-        if: env.SONAR_TOKEN != ''
-        uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
-
-      - name: Restore
-        if: env.SONAR_TOKEN != ''
-        run: dotnet restore Consyzer.slnx
-
-      - name: Download Linux coverage
-        if: env.SONAR_TOKEN != ''
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: Consyzer-linux-coverage
-          path: TestResults/linux
-
-      - name: Download Windows coverage
-        if: env.SONAR_TOKEN != ''
-        uses: actions/download-artifact@v4
-        with:
-          name: Consyzer-windows-coverage
-          path: TestResults/windows
-
+          pattern: coverage-*
+          path: TestResults/coverage
       - name: Merge coverage
-        if: env.SONAR_TOKEN != ''
         uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # 5.5.11
         with:
-          reports: 'TestResults/linux/**/coverage.opencover.xml;TestResults/windows/**/coverage.opencover.xml'
+          reports: TestResults/coverage/**/coverage.opencover.xml
           targetdir: TestResults/merged
-          reporttypes: SonarQube
-
-      - name: Verify merged coverage
-        if: env.SONAR_TOKEN != ''
-        shell: pwsh
-        run: |
-          [xml]$report = Get-Content -LiteralPath TestResults/merged/SonarQube.xml -Raw
-          foreach ($name in 'LinuxLibraryResolutionResolver.cs', 'WindowsLibraryResolutionResolver.cs') {
-            $files = @($report.coverage.file | Where-Object { $_.path.EndsWith("/$name", [StringComparison]::Ordinal) })
-            if ($files.Count -ne 1) { throw "Missing coverage for $name." }
-            $file = $files[0]
-            if (-not $file.path.StartsWith("$env:GITHUB_WORKSPACE/", [StringComparison]::Ordinal) -or
-                -not (Test-Path -LiteralPath $file.path -PathType Leaf) -or
-                @($file.lineToCover | Where-Object { $_.covered -eq 'true' }).Count -eq 0 -or
-                @($file.lineToCover | Where-Object { [int]$_.coveredBranches -gt 0 }).Count -eq 0) {
-              throw "Coverage for $name has no matching source path, covered lines or covered branches."
-            }
-          }
-
+          reporttypes: SonarQube;Html;TextSummary
+      - uses: actions/upload-artifact@v4
+        with:
+          name: merged-coverage
+          path: TestResults/merged
+          if-no-files-found: error
       - name: Install SonarScanner
-        if: env.SONAR_TOKEN != ''
         run: dotnet tool install dotnet-sonarscanner --version 11.2.1 --tool-path ./.sonar/scanner
-
-      - name: Start SonarCloud analysis
-        if: env.SONAR_TOKEN != ''
-        shell: pwsh
+      - name: Start analysis
         run: |
-          [xml]$runSettings = Get-Content -LiteralPath coverlet.runsettings -Raw
-          $coverageExclusions = (
-            $runSettings.RunSettings.DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile -split ',' |
-            ForEach-Object { $_.Trim() } |
-            Where-Object { $_ }
-          ) -join ','
-          if (-not $coverageExclusions) { throw 'Coverage exclusions are missing from coverlet.runsettings.' }
-
+          [xml]$settings = Get-Content coverlet.runsettings -Raw
+          $exclusions = ($settings.RunSettings.DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile -split ',' |
+            ForEach-Object { $_.Trim() } | Where-Object { $_ }) -join ','
+          if (-not $exclusions) { throw 'Coverage exclusions are missing.' }
           & ./.sonar/scanner/dotnet-sonarscanner begin `
-            /k:"danilrudin_Consyzer" `
-            /o:"danilrudin" `
+            /k:danilrudin_Consyzer /o:danilrudin `
             /d:sonar.token="$env:SONAR_TOKEN" `
             /d:sonar.dotnet.excludeTestProjects=true `
-            /d:sonar.coverage.exclusions="$coverageExclusions" `
-            /d:sonar.coverageReportPaths="TestResults/merged/SonarQube.xml"
-          if ($LASTEXITCODE -ne 0) { throw 'SonarCloud analysis could not start.' }
-
+            /d:sonar.coverage.exclusions="$exclusions" `
+            /d:sonar.coverageReportPaths=TestResults/merged/SonarQube.xml `
+            /d:sonar.qualitygate.wait=true
       - name: Build for analysis
-        if: env.SONAR_TOKEN != ''
-        run: dotnet build Consyzer.slnx --configuration Release --no-restore
-
-      - name: End SonarCloud analysis
-        if: env.SONAR_TOKEN != ''
-        shell: pwsh
+        run: dotnet build Consyzer.slnx -c Release --no-incremental
+      - name: Finish analysis and wait for quality gate
         run: ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+  required:
+    name: Required CI
+    if: always()
+    needs: [ci, analysis]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail unless all required checks passed
+        if: >-
+          needs.ci.result != 'success'
+          || needs.analysis.result != (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'skipped' || 'success')
+        run: |
+          echo '::error::A required check failed, was cancelled or was unexpectedly skipped.'
+          exit 1
+
+  release:
+    name: Release
+    needs: required
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.required.result == 'success'
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: ./.github/workflows/release.yml
