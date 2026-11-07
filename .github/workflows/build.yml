@@ -27,9 +27,11 @@ jobs:
           - platform: Linux
             runner: ubuntu-latest
             rid: linux-x64
+            archive: Consyzer-linux-x64.tar.gz
           - platform: Windows
             runner: windows-latest
             rid: win-x64
+            archive: Consyzer-win-x64.zip
     defaults:
       run:
         shell: pwsh
@@ -45,7 +47,7 @@ jobs:
         run: >-
           dotnet test Consyzer.slnx -c Release -warnaserror
           --settings coverlet.runsettings --collect:"XPlat Code Coverage"
-          --logger trx --results-directory TestResults/collected
+          --results-directory TestResults/collected
       - name: Normalize coverage source paths
         run: |
           $root = (Get-Location).Path
@@ -62,32 +64,25 @@ jobs:
           name: coverage-${{ matrix.rid }}
           path: TestResults/collected/**/coverage.opencover.xml
           if-no-files-found: error
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tests-${{ matrix.rid }}
-          path: TestResults/collected/**/*.trx
-          if-no-files-found: warn
       - name: Publish
         run: >-
           dotnet publish Consyzer/Consyzer.csproj -c Release
           --runtime ${{ matrix.rid }} --self-contained false
-          --output artifacts/publish -warnaserror
+          --output "$env:RUNNER_TEMP/consyzer-publish" -warnaserror
       - name: Package Windows
         if: runner.os == 'Windows'
-        run: Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/Consyzer-win-x64.zip
+        run: >-
+          Compress-Archive -Path "$env:RUNNER_TEMP/consyzer-publish/*"
+          -DestinationPath "$env:RUNNER_TEMP/${{ matrix.archive }}"
       - name: Package Linux
         if: runner.os == 'Linux'
         shell: bash
-        run: tar -czf artifacts/Consyzer-linux-x64.tar.gz -C artifacts/publish .
+        run: tar -czf "$RUNNER_TEMP/${{ matrix.archive }}" -C "$RUNNER_TEMP/consyzer-publish" .
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Consyzer-${{ matrix.rid }}
-          path: |
-            artifacts/Consyzer-*.zip
-            artifacts/Consyzer-*.tar.gz
+          path: ${{ runner.temp }}/${{ matrix.archive }}
           if-no-files-found: error
 
   analysis:
@@ -117,12 +112,7 @@ jobs:
         with:
           reports: TestResults/coverage/**/coverage.opencover.xml
           targetdir: TestResults/merged
-          reporttypes: SonarQube;Html;TextSummary
-      - uses: actions/upload-artifact@v4
-        with:
-          name: merged-coverage
-          path: TestResults/merged
-          if-no-files-found: error
+          reporttypes: SonarQube
       - name: Install SonarScanner
         run: dotnet tool install dotnet-sonarscanner --version 11.2.1 --tool-path ./.sonar/scanner
       - name: Start analysis
