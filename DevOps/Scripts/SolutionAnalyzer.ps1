@@ -44,13 +44,25 @@ foreach ($folder in $analysisFolders) {
 	Write-Output ("[{0}] Analyzing:`n`t{1}" -f $index, $folder)
 	Write-Output ""
 
-	& $ConsyzerPath `
-		--AnalysisDirectory $folder `
-		--SearchPatterns $SearchPatterns `
-		--RecursiveSearch $RecursiveSearch `
-		--ReportFormats $ReportFormats
+	try {
+		& {
+			$ErrorActionPreference = 'Stop'
+			# Non-zero Consyzer exit codes are handled as analysis results below.
+			$PSNativeCommandUseErrorActionPreference = $false
 
-	$exitCode = $LASTEXITCODE
+			& $ConsyzerPath `
+				--AnalysisDirectory $folder `
+				--SearchPatterns $SearchPatterns `
+				--RecursiveSearch $RecursiveSearch `
+				--ReportFormats $ReportFormats
+		}
+		$exitCode = $LASTEXITCODE
+	}
+	catch {
+		Write-Error -ErrorRecord $_ -ErrorAction Continue
+		$exitCode = 4
+	}
+
 	$effectiveExitCode = $exitCode
 
 	if ($exitCode -notin $knownExitCodes) {
