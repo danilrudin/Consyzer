@@ -58,12 +58,13 @@ jobs:
             }
             $report.Save($_.FullName)
           }
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
+      - name: Save coverage for analysis
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/cache/save@v6
         with:
-          name: coverage-${{ matrix.rid }}
           path: TestResults/collected/**/coverage.opencover.xml
-          if-no-files-found: error
+          key: coverage-${{ github.run_id }}-${{ matrix.rid }}
+          enableCrossOsArchive: true
       - name: Publish
         run: >-
           dotnet publish Consyzer/Consyzer.csproj -c Release
@@ -103,14 +104,24 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
-      - uses: actions/download-artifact@v4
+      - name: Restore Linux coverage
+        uses: actions/cache/restore@v6
         with:
-          pattern: coverage-*
-          path: TestResults/coverage
+          path: TestResults/collected/**/coverage.opencover.xml
+          key: coverage-${{ github.run_id }}-linux-x64
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Restore Windows coverage
+        uses: actions/cache/restore@v6
+        with:
+          path: TestResults/collected/**/coverage.opencover.xml
+          key: coverage-${{ github.run_id }}-win-x64
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
       - name: Merge coverage
         uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # 5.5.11
         with:
-          reports: TestResults/coverage/**/coverage.opencover.xml
+          reports: TestResults/collected/**/coverage.opencover.xml
           targetdir: TestResults/merged
           reporttypes: SonarQube
       - name: Install SonarScanner
