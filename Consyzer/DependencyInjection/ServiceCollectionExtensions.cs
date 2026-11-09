@@ -56,7 +56,7 @@ internal static partial class ServiceCollectionExtensions
 
         services.AddScoped<IFileHasher, Sha256FileHasher>();
 
-        services.AddScoped<IExtractor<FileInfo, IEnumerable<PInvokeMethod>>, PInvokeMethodExtractor>();
+        services.AddScoped<IExtractor<FileInfo, IReadOnlyList<PInvokeMethod>>, PInvokeMethodExtractor>();
         services.AddScoped<IExtractor<FileInfo, AssemblyMetadata>, AssemblyMetadataExtractor>();
 
         services.AddScoped<IFileClassifier<AnalysisFileClassification>, EcmaFileClassifier>();

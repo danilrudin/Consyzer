@@ -146,44 +146,35 @@ internal abstract class PlatformLibraryResolutionResolverBase
         IReadOnlyList<string> heuristicCandidates,
         NotSimulatedMechanisms notSimulated = NotSimulatedMechanisms.None
     )
-        => new()
-        {
-            TargetPath = context.TargetFile.FullName,
-            LibraryName = context.LibraryName,
-            ResolutionState = ResolutionState.Resolved,
-            ResolvedPresence = new ResolvedPresence(path, kind),
-            HeuristicCandidates = heuristicCandidates,
-            NotSimulated = notSimulated
-        };
+        => LibraryResolution.CreateResolved(
+            context.TargetFile.FullName,
+            context.LibraryName,
+            new ResolvedPresence(path, kind),
+            heuristicCandidates,
+            notSimulated
+        );
 
     protected static LibraryResolution CreateMissing(
         LibraryResolutionContext context,
         IReadOnlyList<string> heuristicCandidates
     )
-        => new()
-        {
-            TargetPath = context.TargetFile.FullName,
-            LibraryName = context.LibraryName,
-            ResolutionState = ResolutionState.Missing,
-            ResolvedPresence = null,
-            HeuristicCandidates = heuristicCandidates,
-            NotSimulated = NotSimulatedMechanisms.None
-        };
+        => LibraryResolution.CreateMissing(
+            context.TargetFile.FullName,
+            context.LibraryName,
+            heuristicCandidates
+        );
 
     protected static LibraryResolution CreateInconclusive(
         LibraryResolutionContext context,
         IReadOnlyList<string> heuristicCandidates,
         NotSimulatedMechanisms notSimulated
     )
-        => new()
-        {
-            TargetPath = context.TargetFile.FullName,
-            LibraryName = context.LibraryName,
-            ResolutionState = ResolutionState.Inconclusive,
-            ResolvedPresence = null,
-            HeuristicCandidates = heuristicCandidates,
-            NotSimulated = notSimulated
-        };
+        => LibraryResolution.CreateInconclusive(
+            context.TargetFile.FullName,
+            context.LibraryName,
+            heuristicCandidates,
+            notSimulated
+        );
 
     protected static IEnumerable<string> EnumerateExistingCandidatePaths(
         IEnumerable<string> fileNames,

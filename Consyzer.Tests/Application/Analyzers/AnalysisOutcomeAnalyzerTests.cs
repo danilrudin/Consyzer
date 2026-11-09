@@ -19,9 +19,19 @@ public sealed class AnalysisOutcomeAnalyzerTests
         };
         var resolutions = new[]
         {
-            CreateResolution(ResolutionState.Resolved),
-            CreateResolution(ResolutionState.Missing),
-            CreateResolution(ResolutionState.Inconclusive)
+            LibraryResolution.CreateResolved(
+                "Target.dll",
+                "native",
+                new ResolvedPresence("native", MechanismKind.ExplicitPath),
+                []
+            ),
+            LibraryResolution.CreateMissing("Target.dll", "native", []),
+            LibraryResolution.CreateInconclusive(
+                "Target.dll",
+                "native",
+                [],
+                NotSimulatedMechanisms.LinuxRPathRunPath
+            )
         };
         var input = new AnalysisOutcomeInput(
             4,
@@ -77,20 +87,5 @@ public sealed class AnalysisOutcomeAnalyzerTests
                     ImportName = "native",
                     ImportFlags = MethodImportAttributes.None
                 })]
-        };
-
-    private static LibraryResolution CreateResolution(ResolutionState state)
-        => new()
-        {
-            TargetPath = "Target.dll",
-            LibraryName = "native",
-            ResolutionState = state,
-            ResolvedPresence = state == ResolutionState.Resolved
-                ? new ResolvedPresence("native", MechanismKind.ExplicitPath)
-                : null,
-            HeuristicCandidates = [],
-            NotSimulated = state == ResolutionState.Inconclusive
-                ? NotSimulatedMechanisms.LinuxRPathRunPath
-                : NotSimulatedMechanisms.None
         };
 }

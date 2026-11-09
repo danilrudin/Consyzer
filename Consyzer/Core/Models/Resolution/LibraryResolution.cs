@@ -2,38 +2,114 @@
 
 internal sealed class LibraryResolution
 {
+    private LibraryResolution(
+        string targetPath,
+        string libraryName,
+        ResolutionState resolutionState,
+        ResolvedPresence? resolvedPresence,
+        IReadOnlyList<string> heuristicCandidates,
+        NotSimulatedMechanisms notSimulated
+    )
+    {
+        TargetPath = targetPath;
+        LibraryName = libraryName;
+        ResolutionState = resolutionState;
+        ResolvedPresence = resolvedPresence;
+        HeuristicCandidates = heuristicCandidates;
+        NotSimulated = notSimulated;
+    }
+
     /// <summary>
     /// Path to the managed binary where the native dependency was declared.
     /// </summary>
-    public required string TargetPath { get; init; }
+    public string TargetPath { get; }
 
     /// <summary>
     /// Native library name declared by the target binary.
     /// </summary>
-    public required string LibraryName { get; init; }
+    public string LibraryName { get; }
 
     /// <summary>
     /// Final resolution state for the native dependency.
     /// </summary>
-    public required ResolutionState ResolutionState { get; init; }
+    public ResolutionState ResolutionState { get; }
 
     /// <summary>
     /// Resolved native library information.
     /// Set only when <see cref="ResolutionState"/> is <see cref="ResolutionState.Resolved"/>.
     /// </summary>
-    public ResolvedPresence? ResolvedPresence { get; init; }
+    public ResolvedPresence? ResolvedPresence { get; }
 
     /// <summary>
     /// Candidate paths discovered by heuristic checks.
     /// These candidates are reported for diagnostics only and do not affect <see cref="ResolutionState"/>.
     /// </summary>
-    public required IReadOnlyList<string> HeuristicCandidates { get; init; }
+    public IReadOnlyList<string> HeuristicCandidates { get; }
 
     /// <summary>
     /// Loader mechanisms that are not simulated by the current resolver.
     /// These flags explain why unresolved results can be inconclusive.
     /// </summary>
-    public required NotSimulatedMechanisms NotSimulated { get; init; }
+    public NotSimulatedMechanisms NotSimulated { get; }
+
+    public static LibraryResolution CreateResolved(
+        string targetPath,
+        string libraryName,
+        ResolvedPresence resolvedPresence,
+        IReadOnlyList<string> heuristicCandidates,
+        NotSimulatedMechanisms notSimulated = NotSimulatedMechanisms.None
+    )
+    {
+        ArgumentNullException.ThrowIfNull(resolvedPresence);
+
+        return new LibraryResolution(
+            targetPath,
+            libraryName,
+            ResolutionState.Resolved,
+            resolvedPresence,
+            heuristicCandidates,
+            notSimulated
+        );
+    }
+
+    public static LibraryResolution CreateMissing(
+        string targetPath,
+        string libraryName,
+        IReadOnlyList<string> heuristicCandidates
+    )
+        => new(
+            targetPath,
+            libraryName,
+            ResolutionState.Missing,
+            null,
+            heuristicCandidates,
+            NotSimulatedMechanisms.None
+        );
+
+    public static LibraryResolution CreateInconclusive(
+        string targetPath,
+        string libraryName,
+        IReadOnlyList<string> heuristicCandidates,
+        NotSimulatedMechanisms notSimulated
+    )
+    {
+        if (notSimulated == NotSimulatedMechanisms.None)
+        {
+            throw new ArgumentException(
+                "Inconclusive resolution requires at least one unsimulated mechanism.",
+                nameof(notSimulated)
+            );
+        }
+
+        return new LibraryResolution(
+            targetPath,
+            libraryName,
+            ResolutionState.Inconclusive,
+            null,
+            heuristicCandidates,
+            notSimulated
+        );
+    }
 }
 
 internal enum ResolutionState

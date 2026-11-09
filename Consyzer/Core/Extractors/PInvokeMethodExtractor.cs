@@ -9,9 +9,9 @@ namespace Consyzer.Core.Extractors;
 
 internal sealed class PInvokeMethodExtractor(
     IResourceCache<FileInfo, PEReader> peReaderCache
-) : IExtractor<FileInfo, IEnumerable<PInvokeMethod>>
+) : IExtractor<FileInfo, IReadOnlyList<PInvokeMethod>>
 {
-    public IEnumerable<PInvokeMethod> Extract(FileInfo file)
+    public IReadOnlyList<PInvokeMethod> Extract(FileInfo file)
     {
         var peReader = peReaderCache.GetOrAdd(file);
         var mdReader = peReader.GetMetadataReader();

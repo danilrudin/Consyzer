@@ -19,8 +19,8 @@ public sealed class AnalysisExitCodeAnalyzerTests
     {
         var result = _analyzer.Analyze(
         [
-            CreateResolution(ResolutionState.Resolved),
-            CreateResolution(ResolutionState.Resolved)
+            CreateResolved(),
+            CreateResolved()
         ]);
 
         Assert.Equal(AnalysisExitCode.Success, result.Code);
@@ -31,8 +31,8 @@ public sealed class AnalysisExitCodeAnalyzerTests
     {
         var result = _analyzer.Analyze(
         [
-            CreateResolution(ResolutionState.Resolved),
-            CreateResolution(ResolutionState.Inconclusive)
+            CreateResolved(),
+            CreateInconclusive()
         ]);
 
         Assert.Equal(AnalysisExitCode.Inconclusive, result.Code);
@@ -43,26 +43,27 @@ public sealed class AnalysisExitCodeAnalyzerTests
     {
         var result = _analyzer.Analyze(
         [
-            CreateResolution(ResolutionState.Resolved),
-            CreateResolution(ResolutionState.Inconclusive),
-            CreateResolution(ResolutionState.Missing)
+            CreateResolved(),
+            CreateInconclusive(),
+            LibraryResolution.CreateMissing("Target.dll", "native", [])
         ]);
 
         Assert.Equal(AnalysisExitCode.Missing, result.Code);
     }
 
-    private static LibraryResolution CreateResolution(ResolutionState state)
-        => new()
-        {
-            TargetPath = "Target.dll",
-            LibraryName = "native",
-            ResolutionState = state,
-            ResolvedPresence = state == ResolutionState.Resolved
-                ? new ResolvedPresence("native", MechanismKind.ExplicitPath)
-                : null,
-            HeuristicCandidates = [],
-            NotSimulated = state == ResolutionState.Inconclusive
-                ? NotSimulatedMechanisms.LinuxRPathRunPath
-                : NotSimulatedMechanisms.None
-        };
+    private static LibraryResolution CreateResolved()
+        => LibraryResolution.CreateResolved(
+            "Target.dll",
+            "native",
+            new ResolvedPresence("native", MechanismKind.ExplicitPath),
+            []
+        );
+
+    private static LibraryResolution CreateInconclusive()
+        => LibraryResolution.CreateInconclusive(
+            "Target.dll",
+            "native",
+            [],
+            NotSimulatedMechanisms.LinuxRPathRunPath
+        );
 }
