@@ -34,10 +34,10 @@ jobs:
           BASE_SHA: ${{ github.event.before }}
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          $version = dotnet msbuild Consyzer/Consyzer.csproj -nologo -getProperty:Version
+          $version = dotnet msbuild Consyzer/Consyzer.csproj -nologo -p:Configuration=Release -getProperty:Version
           $base = Join-Path $env:RUNNER_TEMP consyzer-base
           git worktree add --detach $base $env:BASE_SHA
-          $previous = dotnet msbuild "$base/Consyzer/Consyzer.csproj" -nologo -getProperty:Version
+          $previous = dotnet msbuild "$base/Consyzer/Consyzer.csproj" -nologo -p:Configuration=Release -getProperty:Version
           foreach ($value in $version, $previous) {
             if ($value -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
               throw "MSBuild Version must be a stable major.minor.patch value; got '$value'."
@@ -48,21 +48,29 @@ jobs:
           "changed=$(($version -ne $previous).ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
       - name: Check release state
         id: release
-        if: steps.version.outputs.changed == 'true'
         uses: actions/github-script@v8
         env:
           TAG: v${{ steps.version.outputs.version }}
+          VERSION_CHANGED: ${{ steps.version.outputs.changed }}
         with:
           script: |
             const tag = process.env.TAG;
             const releases = await github.paginate(github.rest.repos.listReleases, context.repo);
             const release = releases.find(release => release.tag_name === tag);
-            let sha;
-            try { sha = (await github.rest.repos.getCommit({ ...context.repo, ref: `refs/tags/${tag}` })).data.sha; }
-            catch (error) { if (error.status !== 404) throw error; }
-            if (sha && sha !== context.sha) throw new Error(`${tag} points to another commit.`);
+            const published = release && !release.draft;
+            if (!published || process.env.VERSION_CHANGED === 'true') {
+              // Query the ref first because getCommit can return 422 for a missing tag.
+              const tagRef = await github.rest.git.getRef({ ...context.repo, ref: `tags/${tag}` }).catch(error => {
+                if (error.status === 404) return null;
+                throw error;
+              });
+              if (tagRef) {
+                const { data: commit } = await github.rest.repos.getCommit({ ...context.repo, ref: `refs/tags/${tag}` });
+                if (commit.sha !== context.sha) throw new Error(`${tag} points to another commit.`);
+              }
+            }
             if (release?.draft && release.target_commitish !== context.sha) throw new Error('Existing draft belongs to another commit.');
-            if (release && !release.draft) { core.info(`${tag} is already published.`); return; }
+            if (published) { core.info(`${tag} is already published.`); return; }
             const newer = releases.find(release => !release.draft && !release.prerelease &&
               /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(release.tag_name) &&
               release.tag_name.localeCompare(tag, 'en', { numeric: true }) > 0);
@@ -72,7 +80,7 @@ jobs:
       - uses: actions/download-artifact@v8
         if: steps.release.outputs.publish == 'true'
         with:
-          pattern: Consyzer-*-x64
+          pattern: Consyzer-${{ steps.version.outputs.version }}-*-x64
           path: artifacts
           merge-multiple: true
       - name: Publish release
@@ -85,5 +93,5 @@ jobs:
           make_latest: legacy
           fail_on_unmatched_files: true
           files: |
-            artifacts/Consyzer-win-x64.zip
-            artifacts/Consyzer-linux-x64.tar.gz
+            artifacts/Consyzer-${{ steps.version.outputs.version }}-win-x64.zip
+            artifacts/Consyzer-${{ steps.version.outputs.version }}-linux-x64.tar.gz
