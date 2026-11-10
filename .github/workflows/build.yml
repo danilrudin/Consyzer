@@ -25,7 +25,7 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-latest
+            runner: ubuntu-26.04
             rid: linux-x64
             archive: Consyzer-linux-x64.tar.gz
           - platform: Windows
@@ -80,7 +80,7 @@ jobs:
         shell: bash
         run: tar -czf "$RUNNER_TEMP/${{ matrix.archive }}" -C "$RUNNER_TEMP/consyzer-publish" .
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Consyzer-${{ matrix.rid }}
           path: ${{ runner.temp }}/${{ matrix.archive }}
@@ -90,7 +90,7 @@ jobs:
     name: SonarCloud
     needs: ci
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     defaults:
@@ -148,7 +148,7 @@ jobs:
     name: Required CI
     if: always()
     needs: [ci, analysis]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Fail unless all required checks passed
         if: >-

@@ -11,7 +11,7 @@ jobs:
   release:
     name: Publish release
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     concurrency:
       group: consyzer-release-master
       queue: max
@@ -69,7 +69,7 @@ jobs:
             if (newer) { core.notice(`Skipping ${tag}: ${newer.tag_name} is already published.`); return; }
             core.setOutput('create', !release);
             core.setOutput('publish', true);
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         if: steps.release.outputs.publish == 'true'
         with:
           pattern: Consyzer-*-x64
