@@ -7,7 +7,7 @@ using Consyzer.Tests.TestSupport.Collections;
 
 namespace Consyzer.Tests.Core.Resolvers.Platform;
 
-[Collection(TestCollectionNames.ResolverEnvironment)]
+[Collection<ResolverEnvironmentCollection>]
 public sealed class WindowsLibraryResolutionResolverTests : IDisposable
 {
     private const string PathVariableName = "PATH";

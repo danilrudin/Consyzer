@@ -8,12 +8,15 @@ using Consyzer.Tests.TestSupport.Scopes;
 
 namespace Consyzer.Tests.Core.Resolvers.Platform;
 
-[Collection(TestCollectionNames.ResolverEnvironment)]
+[Collection<ResolverEnvironmentCollection>]
 public sealed class LinuxLibraryResolutionResolverTests : IDisposable
 {
     private const string LdLibraryPathVariableName = "LD_LIBRARY_PATH";
     private const string TestFileContent = "test file";
     private const string TargetFileName = "Target.dll";
+
+    public static MatrixTheoryData<string, string> LdLibraryPathSeparatorPairs { get; } =
+        new([":", ";"], [":", ";"]);
 
     private readonly TemporaryDirectory _analysisDirectory = new("consyzer-linux-analysis-");
     private readonly TemporaryDirectory _environmentDirectory = new("consyzer-linux-env-");
@@ -352,10 +355,7 @@ public sealed class LinuxLibraryResolutionResolverTests : IDisposable
     }
 
     [LinuxTheory]
-    [InlineData(":", ":")]
-    [InlineData(";", ";")]
-    [InlineData(":", ";")]
-    [InlineData(";", ":")]
+    [MemberData(nameof(LdLibraryPathSeparatorPairs))]
     public void Resolve_ShouldSearchLdLibraryPathEntriesInOrder(
         string firstSeparator,
         string secondSeparator
