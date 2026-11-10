@@ -87,9 +87,11 @@ The following report formats are supported:
 3. `Csv`
 4. `Xml`
 
+The `Console` report goes to standard output. During analysis, Consyzer writes log messages to the console and to `Logs/`. File reports go to `Reports/`. Both directories are next to the executable.
+
 ### Example report (Console)
 
-```
+```text
 [Analysis]
     Platform: Windows
 [AssemblyMetadataList]

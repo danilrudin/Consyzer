@@ -25,13 +25,13 @@ jobs:
       matrix:
         include:
           - platform: Linux
-            runner: ubuntu-latest
+            runner: ubuntu-26.04
             rid: linux-x64
-            archive: Consyzer-linux-x64.tar.gz
+            archive_extension: tar.gz
           - platform: Windows
             runner: windows-latest
             rid: win-x64
-            archive: Consyzer-win-x64.zip
+            archive_extension: zip
     defaults:
       run:
         shell: pwsh
@@ -70,27 +70,43 @@ jobs:
           dotnet publish Consyzer/Consyzer.csproj -c Release
           --runtime ${{ matrix.rid }} --self-contained false
           --output "$env:RUNNER_TEMP/consyzer-publish" -warnaserror
+      - name: Name packages
+        id: package
+        env:
+          RID: ${{ matrix.rid }}
+          ARCHIVE_EXTENSION: ${{ matrix.archive_extension }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = dotnet msbuild Consyzer/Consyzer.csproj -nologo -p:Configuration=Release -getProperty:Version
+          if ($version -isnot [string] -or $version -notmatch '^[0-9][0-9A-Za-z.+-]*$') { throw "Invalid package version: $version" }
+          $name = "Consyzer-$version-$env:RID"
+          "name=$name" >> $env:GITHUB_OUTPUT
+          "archive=$name.$env:ARCHIVE_EXTENSION" >> $env:GITHUB_OUTPUT
       - name: Package Windows
         if: runner.os == 'Windows'
+        env:
+          ARCHIVE_NAME: ${{ steps.package.outputs.archive }}
         run: >-
           Compress-Archive -Path "$env:RUNNER_TEMP/consyzer-publish/*"
-          -DestinationPath "$env:RUNNER_TEMP/${{ matrix.archive }}"
+          -DestinationPath "$env:RUNNER_TEMP/$env:ARCHIVE_NAME"
       - name: Package Linux
         if: runner.os == 'Linux'
+        env:
+          ARCHIVE_NAME: ${{ steps.package.outputs.archive }}
         shell: bash
-        run: tar -czf "$RUNNER_TEMP/${{ matrix.archive }}" -C "$RUNNER_TEMP/consyzer-publish" .
+        run: tar -czf "$RUNNER_TEMP/$ARCHIVE_NAME" -C "$RUNNER_TEMP/consyzer-publish" .
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: Consyzer-${{ matrix.rid }}
-          path: ${{ runner.temp }}/${{ matrix.archive }}
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ runner.temp }}/${{ steps.package.outputs.archive }}
           if-no-files-found: error
 
   analysis:
     name: SonarCloud
     needs: ci
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     defaults:
@@ -148,7 +164,7 @@ jobs:
     name: Required CI
     if: always()
     needs: [ci, analysis]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Fail unless all required checks passed
         if: >-
