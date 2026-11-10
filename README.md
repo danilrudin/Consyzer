@@ -44,20 +44,18 @@ At this time, Consyzer supports checking the presence of native libraries in the
 
 ## How it works
 
-1. Consyzer selects files for analysis based on the specified directory and search patterns;
-2. Consyzer logs and excludes from analysis files that are not ECMA-335 assemblies;
-3. Consyzer analyzes the remaining ECMA assemblies for the presence of P/Invoke methods;
-4. Consyzer analyzes each found P/Invoke method and checks whether the corresponding native libraries exist in the system;
-5. Consyzer generates a report based on the analysis results in one or more formats depending on the configuration;
+1. Consyzer selects files for analysis based on the specified directory and search patterns.
+2. Consyzer logs and excludes from analysis files that are not ECMA-335 assemblies.
+3. Consyzer analyzes the remaining ECMA assemblies for the presence of P/Invoke methods.
+4. Consyzer looks for the native libraries imported by each assembly.
+5. Consyzer generates a report based on the analysis results in one or more formats depending on the configuration.
 6. Consyzer returns an exit code indicating the final analysis result, which also allows you to handle analysis incidents individually according to your requirements.
 
 > ⚠️ The analysis is based on the metadata of CIL assemblies and does not check the correctness of marshaling between managed and native code.
 
 ## Library Search Model
 
-**Consyzer** uses a strict library analysis model: only a library whose location has been explicitly determined through supported search mechanisms is considered found.
-
-The result of checking the presence of each native library may have one of the following states:
+**Consyzer** searches for libraries separately for each assembly, taking its directory into account. For example, a search for `foo.dll` can return a status of `Resolved` for one assembly and `Inconclusive` for another.
 
 | State          | Analysis meaning                                                                                                                 |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -75,15 +73,9 @@ Consyzer also indicates the mechanism through which the presence of the library 
 | `EnvironmentOverride`    | The library was found through an environment variable              |
 | `CurrentDirectory`       | The library was found in the current working directory (Windows)   |
 
-Some existing OS loading mechanisms are either not fully modeled and will be added in future versions, or will not be added at all because they cannot be reproduced by static analysis.
-For example, on Windows these may include `KnownDLLs`, `SxS`, DLL redirections, and process search directory settings,
-and on Linux — `RPATH`, `RUNPATH`, `ld.so.cache`, `ld.so.conf`, and other secure-execution specifics.
+Some OS loader mechanisms are outside the search Consyzer models. Examples include `KnownDLLs`, `SxS`, or DLL redirection on Windows and `RPATH`, `RUNPATH`, and `ld.so.cache` on Linux. Consyzer lists mechanisms like these in `NotSimulated`.
 
-If the library was not found, but there are non-simulated mechanisms capable of affecting the result,
-Consyzer will register such a library as `Inconclusive` instead of presenting an assumption as a guaranteed result.
-
-Consyzer may also show heuristic matches — for example, a library in the analysis root that is not next to a nested target assembly.
-Such matches are also registered separately and do not turn the strict check result into a successful one.
+Consyzer can also show heuristic matches, such as a library in the analysis root when the importing assembly is in a subdirectory. Matches like these are listed separately in `HeuristicCandidates`.
 
 ## Analysis Results
 
@@ -192,7 +184,7 @@ The following report formats are supported:
 
 | Code | Analysis meaning                                                                                                    |
 | ---- | ------------------------------------------------------------------------------------------------------------------- |
-| 0    | All libraries were found through supported search mechanisms                                                        |
+| 0    | All P/Invoke dependencies were resolved, or the analyzed assemblies contain no P/Invoke imports                     |
 | 1    | One or more libraries are missing                                                                                   |
 | 2    | One or more libraries were not found by checked mechanisms, but may be found by non-simulated OS loading mechanisms |
 | 3    | Input parameter error                                                                                               |
@@ -200,7 +192,6 @@ The following report formats are supported:
 
 > If there is at least one `Missing` among the results, code `1` is returned.
 > If there is no `Missing`, but there is at least one `Inconclusive`, code `2` is returned.
-> Code `0` is returned only when all found P/Invoke dependencies have the `Resolved` state.
 
 ### Usage
 
@@ -221,7 +212,7 @@ You can also specify two optional parameters:
 Windows:
 
 ```powershell
-Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--ReportFormats Console,Json,Csv,Xml]
+.\Consyzer.exe --AnalysisDirectory <path_to_directory> --SearchPatterns <search_patterns> [--RecursiveSearch true|false] [--ReportFormats Console,Json,Csv,Xml]
 ```
 
 Linux:
@@ -233,7 +224,7 @@ Linux:
 ### Example
 
 ```powershell
-Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll,*.exe" --RecursiveSearch true --ReportFormats Console,Json
+.\Consyzer.exe --AnalysisDirectory C:\Modules --SearchPatterns "*.dll,*.exe" --RecursiveSearch true --ReportFormats Console,Json
 ```
 
 ```bash
