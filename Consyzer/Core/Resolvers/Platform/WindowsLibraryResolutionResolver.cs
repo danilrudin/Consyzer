@@ -1,0 +1,169 @@
+﻿using Consyzer.Core.Models.Resolution;
+
+namespace Consyzer.Core.Resolvers.Platform;
+
+internal sealed class WindowsLibraryResolutionResolver(
+    string analysisDirectory
+) : PlatformLibraryResolutionResolverBase
+{
+    private const string LibraryExtension = ".dll";
+    private const string ExecutableExtension = ".exe";
+    private const string EnvironmentVariablePath = "PATH";
+    private readonly string _analysisDirectory = Path.GetFullPath(analysisDirectory);
+
+    public override string PlatformName => "Windows";
+
+    // Windows has a lot of mechanisms we can't simulate statically.
+    private const NotSimulatedMechanisms NotSimulated =
+        NotSimulatedMechanisms.WindowsSxS
+        | NotSimulatedMechanisms.WindowsKnownDlls
+        | NotSimulatedMechanisms.WindowsDllRedirection
+        | NotSimulatedMechanisms.WindowsProcessDirectoryOverrides
+        | NotSimulatedMechanisms.WindowsApiSetSchema
+        | NotSimulatedMechanisms.WindowsPackageGraph
+        | NotSimulatedMechanisms.WindowsLoadedModuleList
+        | NotSimulatedMechanisms.WindowsSafeSearchModeAndFlags
+        | NotSimulatedMechanisms.WindowsDotNetSearchPathOverrides
+        | NotSimulatedMechanisms.WindowsProcessApplicationDirectory;
+
+    public override LibraryResolution Resolve(LibraryResolutionContext context)
+    {
+        var candidates = GetLibraryNameCandidates(context.LibraryName);
+        var heuristicCandidates = IsExplicitPath(context.LibraryName)
+            ? []
+            : CollectHeuristicCandidates(
+                context,
+                candidates,
+                _analysisDirectory,
+                StringComparer.OrdinalIgnoreCase
+            );
+
+        // Application DLL redirection can override even an absolute import path.
+        if (Path.IsPathFullyQualified(context.LibraryName))
+        {
+            return ResolveExplicitPath(
+                context,
+                candidates,
+                heuristicCandidates,
+                notSimulatedWhenMissing: NotSimulatedMechanisms.WindowsDllRedirection
+            );
+        }
+
+        if (context.HasDllImportSearchPathOverride)
+        {
+            return CreateInconclusive(
+                context,
+                heuristicCandidates,
+                NotSimulatedMechanisms.WindowsDotNetSearchPathOverrides
+            );
+        }
+
+        // A relative path is appended to each DLL search directory by Windows.
+        // Rooted paths such as C:foo.dll and \foo.dll depend on process state
+        // that cannot be inferred from the analyzed assembly.
+        if (Path.IsPathRooted(context.LibraryName))
+        {
+            return CreateInconclusive(context, heuristicCandidates, NotSimulated);
+        }
+
+        var defaultSystemLocations = GetDefaultSystemLocations();
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var currentDirectoryMechanism = IsExplicitPath(context.LibraryName)
+            ? MechanismKind.ExplicitPath
+            : MechanismKind.CurrentDirectory;
+        var environmentDirectories = SplitSearchPath(
+            Environment.GetEnvironmentVariable(EnvironmentVariablePath)
+        ).ToArray();
+
+        foreach (var candidate in candidates)
+        {
+            if (TryResolveAssemblyDirectory(
+                context,
+                candidate,
+                heuristicCandidates,
+                out var result
+            ))
+            {
+                return result;
+            }
+
+            if (TryResolveInDirectories(
+                context,
+                candidate,
+                defaultSystemLocations,
+                MechanismKind.DefaultSystemLocations,
+                heuristicCandidates,
+                out result
+            ))
+            {
+                return result;
+            }
+
+            if (TryResolveInDirectories(
+                context,
+                candidate,
+                [currentDirectory],
+                currentDirectoryMechanism,
+                heuristicCandidates,
+                out result
+            ))
+            {
+                return result;
+            }
+
+            if (TryResolveInDirectories(
+                context,
+                candidate,
+                environmentDirectories,
+                MechanismKind.EnvironmentOverride,
+                heuristicCandidates,
+                out result
+            ))
+            {
+                return result;
+            }
+        }
+
+        return CreateInconclusive(context, heuristicCandidates, NotSimulated);
+    }
+
+    private static IReadOnlyList<string> GetLibraryNameCandidates(string input)
+    {
+        if (input.EndsWith(LibraryExtension, StringComparison.OrdinalIgnoreCase)
+            || input.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase)
+            || input.EndsWith('.')
+        )
+        {
+            return [input];
+        }
+
+        if (Path.IsPathRooted(input))
+        {
+            return Path.HasExtension(input)
+                ? [input]
+                : [input + LibraryExtension];
+        }
+
+        if (!Path.HasExtension(input))
+        {
+            // LoadLibrary resolves the first runtime variation to the physical .dll file too.
+            return [input + LibraryExtension];
+        }
+
+        return DistinctCandidates(
+            [input, input + LibraryExtension],
+            StringComparer.OrdinalIgnoreCase
+        );
+    }
+
+    private static string?[] GetDefaultSystemLocations()
+    {
+        var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        return
+        [
+            Environment.SystemDirectory,
+            string.IsNullOrEmpty(windowsDirectory) ? null : Path.Combine(windowsDirectory, "System"),
+            windowsDirectory
+        ];
+    }
+}

@@ -1,48 +1,56 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using Consyzer.Options;
-using Consyzer.Core.Models;
 using Consyzer.Output.Builders;
-using static Consyzer.Constants.Output.Structure;
+using Consyzer.Core.Models.Analysis;
 
 namespace Consyzer.Output.Logging;
 
 internal sealed class AnalysisLogBuilder(
-    IOptions<AppOptions> options
+    IOptions<AppSettingsOptions> options
 ) : IAnalysisLogBuilder
 {
-    private readonly AppOptions.OutputOptions.ConsoleOptions _options = options.Value.Output.Console;
+    private const string CommandLineOptionsHeader = $"[{nameof(CommandLineOptions)}]";
+    private const string FilesFoundHeader = "[FilesFound]";
+    private const string FileClassificationHeader = $"[{nameof(AnalysisFileClassification)}]";
+    private const string NonEcmaModulesHeader = $"[{nameof(AnalysisFileClassification.NonEcmaModules)}]";
+    private const string NonEcmaAssembliesHeader = $"[{nameof(AnalysisFileClassification.NonEcmaAssemblies)}]";
+    private const string EcmaAssembliesHeader = $"[{nameof(AnalysisFileClassification.EcmaAssemblies)}]";
 
-    public string BuildAnalysisOptionsLog(AnalysisOptions options) =>
+    private readonly AppSettingsOptions.OutputOptions.ConsoleOptions _options = options.Value.Output.Console;
+
+    public string BuildAnalysisOptionsLog(CommandLineOptions options) =>
         new IndentedTextBuilder(_options.IndentChars)
-            .Title(Section.Bracketed.AnalysisOptions)
+            .Title(CommandLineOptionsHeader)
             .PushIndent()
-            .Line(Label.Options.AnalysisDirectory, options.AnalysisDirectory)
-            .Line(Label.Options.SearchPatterns, options.SearchPatterns)
+            .Line(nameof(CommandLineOptions.AnalysisDirectory), options.AnalysisDirectory)
+            .Line(nameof(CommandLineOptions.SearchPatterns), options.SearchPatterns)
+            .Line(nameof(CommandLineOptions.RecursiveSearch), options.RecursiveSearch)
+            .Line(nameof(CommandLineOptions.ReportFormats), options.ReportFormats)
             .PopIndent()
             .Build();
 
     public string BuildFoundFilesLog(IEnumerable<FileInfo> files) =>
         new IndentedTextBuilder(_options.IndentChars)
-            .Title($"{Section.Bracketed.FilesFound} Count: {files.Count()}")
+            .Title($"{FilesFoundHeader} Count: {files.Count()}")
             .PushIndent()
-            .IndexedItems(files, f => f.Name)
+            .IndexedItems(files, f => f.FullName)
             .PopIndent()
             .Build();
 
     public string BuildFileClassificationLog(AnalysisFileClassification fileClassification) =>
         new IndentedTextBuilder(_options.IndentChars)
-            .Title(Section.Bracketed.FileClassification)
+            .Title(FileClassificationHeader)
             .PushIndent()
-            .Title($"{Section.Bracketed.NotEcma} Count: {fileClassification.NonEcmaModules.Count()}")
-            .IndexedItems(fileClassification.NonEcmaModules, f => f.Name)
+            .Title($"{NonEcmaModulesHeader} Count: {fileClassification.NonEcmaModules.Count}")
+            .IndexedItems(fileClassification.NonEcmaModules, f => f.FullName)
             .PopIndent()
             .PushIndent()
-            .Title($"{Section.Bracketed.NotAssemblies} Count: {fileClassification.NonEcmaAssemblies.Count()}")
-            .IndexedItems(fileClassification.NonEcmaAssemblies, f => f.Name)
+            .Title($"{NonEcmaAssembliesHeader} Count: {fileClassification.NonEcmaAssemblies.Count}")
+            .IndexedItems(fileClassification.NonEcmaAssemblies, f => f.FullName)
             .PopIndent()
             .PushIndent()
-            .Title($"{Section.Bracketed.EcmaAssemblies} Count: {fileClassification.EcmaAssemblies.Count()}")
-            .IndexedItems(fileClassification.EcmaAssemblies, f => f.Name)
+            .Title($"{EcmaAssembliesHeader} Count: {fileClassification.EcmaAssemblies.Count}")
+            .IndexedItems(fileClassification.EcmaAssemblies, f => f.FullName)
             .PopIndent()
             .Build();
 }

@@ -29,23 +29,30 @@ internal sealed class IndentedTextBuilder(
 
     public IndentedTextBuilder Line(string line)
     {
-        _sb.AppendLine($"{IndentString()}{line}");
+        AppendIndent();
+        _sb.AppendLine(line);
         return this;
     }
 
     public IndentedTextBuilder Line(string line, object? value)
     {
-        _sb.AppendLine($"{IndentString()}{line}: {value}");
+        AppendIndent();
+        _sb.Append(line).Append(": ").Append(value).AppendLine();
         return this;
     }
 
     public IndentedTextBuilder IndexedItems<T>(IEnumerable<T> items, Func<T, string> formatter)
     {
-        var indent = IndentString();
+        var index = 0;
 
-        foreach (var (item, index) in items.Select((x, i) => (x, i)))
+        foreach (var item in items)
         {
-            _sb.AppendLine($"{indent}[{index}] {formatter(item)}");
+            AppendIndent();
+            _sb.Append('[')
+                .Append(index)
+                .Append("] ")
+                .AppendLine(formatter(item));
+            ++index;
         }
 
         return this;
@@ -53,14 +60,16 @@ internal sealed class IndentedTextBuilder(
 
     public IndentedTextBuilder IndexedSection<T>(IEnumerable<T> items, Action<IndentedTextBuilder, T> renderer)
     {
-        var indent = IndentString();
+        var index = 0;
 
-        foreach (var (item, index) in items.Select((x, i) => (x, i)))
+        foreach (var item in items)
         {
-            _sb.AppendLine($"{indent}[{index}]");
+            AppendIndent();
+            _sb.Append('[').Append(index).AppendLine("]");
             PushIndent();
             renderer(this, item);
             PopIndent();
+            ++index;
         }
 
         return this;
@@ -68,5 +77,11 @@ internal sealed class IndentedTextBuilder(
 
     public string Build() => _sb.ToString();
 
-    private string IndentString() => string.Concat(Enumerable.Repeat(indentedChars, _level));
+    private void AppendIndent()
+    {
+        for (var i = 0; i < _level; ++i)
+        {
+            _sb.Append(indentedChars);
+        }
+    }
 }

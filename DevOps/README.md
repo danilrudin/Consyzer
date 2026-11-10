@@ -12,19 +12,33 @@ The script prints the analysis summary in **YAML format** for easier parsing in 
 ```yaml
 AnalysisSummary:
   - Index: 0
-    ExitCode: 5
+    ExitCode: 1
     Path: C:\Path\To\RepoRoot\Foo\bin\Release\net8.0
     Status: Error
-    Message: One or more libraries were not found in the system.
+    Message: One or more libraries are missing.
 
   - Index: 1
     ExitCode: 2
     Path: C:\Path\To\RepoRoot\Baz\bin\Release\net8.0
     Status: Warning
-    Message: One or more libraries were found via the PATH environment variable.
+    Message: One or more libraries were not found by checked mechanisms, but may be found by non-simulated OS loading mechanisms.
 ```
 
 > The output can be parsed with `ConvertFrom-Yaml` in PowerShell or any standard YAML parser.
+
+### Exit code aggregation
+
+The script runs **Consyzer** separately for each discovered build output folder and then returns a single final exit code.
+
+Final exit code priority:
+
+1. `4` — utility execution error;
+2. `3` — input parameter error;
+3. `1` — one or more libraries are missing;
+4. `2` — no missing libraries, but one or more results are inconclusive;
+5. `0` — all libraries were found through supported search mechanisms.
+
+This priority keeps the script aligned with **Consyzer** analysis semantics: `Missing` has priority over `Inconclusive`, even though its numeric code is lower.
 
 ### Usage
 

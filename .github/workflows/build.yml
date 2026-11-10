@@ -1,71 +1,168 @@
 name: Build
+
 on:
   push:
-    branches:
-      - master
+    branches: ['**']
   pull_request:
-    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+concurrency:
+  group: build-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
-    name: Build
-    runs-on: windows-latest
+  ci:
+    name: ${{ matrix.platform }} CI
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux
+            runner: ubuntu-latest
+            rid: linux-x64
+            archive: Consyzer-linux-x64.tar.gz
+          - platform: Windows
+            runner: windows-latest
+            rid: win-x64
+            archive: Consyzer-win-x64.zip
+    defaults:
+      run:
+        shell: pwsh
     steps:
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
+      - uses: actions/checkout@v6
         with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - uses: actions/checkout@v4
-        with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
-
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
+      - uses: actions/setup-dotnet@v5
         with:
-          path: ~\sonar\cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Cache SonarQube scanner
-        id: cache-sonar-scanner
-        uses: actions/cache@v4
-        with:
-          path: .\.sonar\scanner
-          key: ${{ runner.os }}-sonar-scanner
-          restore-keys: ${{ runner.os }}-sonar-scanner
-
-      - name: Install SonarQube scanner
-        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
-        shell: powershell
+          dotnet-version: 10.0.x
+      - name: Build and test with coverage
+        run: >-
+          dotnet test Consyzer.slnx -c Release -warnaserror
+          --settings coverlet.runsettings --collect:"XPlat Code Coverage"
+          --results-directory TestResults/collected
+      - name: Normalize coverage source paths
         run: |
-          New-Item -Path .\.sonar\scanner -ItemType Directory
-          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
-
-      - name: Start Analyze
-        shell: powershell
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: .\.sonar\scanner\dotnet-sonarscanner begin /k:"danilrudin_Consyzer" /o:"danilrudin" /d:sonar.token=$env:SONAR_TOKEN /d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
-
-      - name: Build
-        run: dotnet build --configuration Release
-
-      - name: Unit Tests Executing
-        run: dotnet test --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-      - name: End Analyze
-        shell: powershell
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token=$env:SONAR_TOKEN
-
+          $root = (Get-Location).Path
+          Get-ChildItem TestResults/collected -Recurse -Filter coverage.opencover.xml | ForEach-Object {
+            [xml]$report = Get-Content -LiteralPath $_.FullName -Raw
+            foreach ($file in $report.SelectNodes('//File')) {
+              $file.fullPath = [IO.Path]::GetRelativePath($root, $file.fullPath).Replace('\', '/')
+            }
+            $report.Save($_.FullName)
+          }
+      - name: Save coverage for analysis
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/cache/save@v6
+        with:
+          path: TestResults/collected/**/coverage.opencover.xml
+          key: coverage-${{ github.run_id }}-${{ matrix.rid }}
+          enableCrossOsArchive: true
       - name: Publish
-        run: dotnet publish Consyzer/Consyzer.csproj -c Release -o _publish/Consyzer
-
-      - name: Upload Artifact
+        run: >-
+          dotnet publish Consyzer/Consyzer.csproj -c Release
+          --runtime ${{ matrix.rid }} --self-contained false
+          --output "$env:RUNNER_TEMP/consyzer-publish" -warnaserror
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        run: >-
+          Compress-Archive -Path "$env:RUNNER_TEMP/consyzer-publish/*"
+          -DestinationPath "$env:RUNNER_TEMP/${{ matrix.archive }}"
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: tar -czf "$RUNNER_TEMP/${{ matrix.archive }}" -C "$RUNNER_TEMP/consyzer-publish" .
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Consyzer
-          path: _publish/
+          name: Consyzer-${{ matrix.rid }}
+          path: ${{ runner.temp }}/${{ matrix.archive }}
+          if-no-files-found: error
+
+  analysis:
+    name: SonarCloud
+    needs: ci
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore Linux coverage
+        uses: actions/cache/restore@v6
+        with:
+          path: TestResults/collected/**/coverage.opencover.xml
+          key: coverage-${{ github.run_id }}-linux-x64
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Restore Windows coverage
+        uses: actions/cache/restore@v6
+        with:
+          path: TestResults/collected/**/coverage.opencover.xml
+          key: coverage-${{ github.run_id }}-win-x64
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Merge coverage
+        uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # 5.5.11
+        with:
+          reports: TestResults/collected/**/coverage.opencover.xml
+          targetdir: TestResults/merged
+          reporttypes: SonarQube
+      - name: Install SonarScanner
+        run: dotnet tool install dotnet-sonarscanner --version 11.2.1 --tool-path ./.sonar/scanner
+      - name: Start analysis
+        run: |
+          [xml]$settings = Get-Content coverlet.runsettings -Raw
+          $exclusions = ($settings.RunSettings.DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile -split ',' |
+            ForEach-Object { $_.Trim() } | Where-Object { $_ }) -join ','
+          if (-not $exclusions) { throw 'Coverage exclusions are missing.' }
+          & ./.sonar/scanner/dotnet-sonarscanner begin `
+            /k:danilrudin_Consyzer /o:danilrudin `
+            /d:sonar.token="$env:SONAR_TOKEN" `
+            /d:sonar.dotnet.excludeTestProjects=true `
+            /d:sonar.coverage.exclusions="$exclusions" `
+            /d:sonar.coverageReportPaths=TestResults/merged/SonarQube.xml `
+            /d:sonar.qualitygate.wait=true
+      - name: Build for analysis
+        run: dotnet build Consyzer.slnx -c Release --no-incremental
+      - name: Finish analysis and wait for quality gate
+        run: ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+  required:
+    name: Required CI
+    if: always()
+    needs: [ci, analysis]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail unless all required checks passed
+        if: >-
+          needs.ci.result != 'success'
+          || needs.analysis.result != (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'skipped' || 'success')
+        run: |
+          echo '::error::A required check failed, was cancelled or was unexpectedly skipped.'
+          exit 1
+
+  release:
+    name: Release
+    needs: required
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.required.result == 'success'
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: ./.github/workflows/release.yml

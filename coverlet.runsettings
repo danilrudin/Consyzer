@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>opencover</Format>
+          <ExcludeByFile>
+            **/Program.cs,
+            **/DependencyInjection/**,
+            **/Options/**,
+            **/Helpers/**,
+            **/Output/**,
+            **/Application/AnalysisOrchestrator.cs,
+            **/Application/Analyzers/AssemblyMetadataAnalyzer.cs,
+            **/Application/Analyzers/FileClassificationAnalyzer.cs,
+            **/Application/Analyzers/PInvokeMethodAnalyzer.cs,
+            **/Core/Models/**,
+            **/Core/Extractors/Providers/StringSignatureTypeProvider.cs
+          </ExcludeByFile>
+          <Exclude>[*.Tests]*</Exclude>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

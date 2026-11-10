@@ -1,118 +1,200 @@
-﻿using System.Text;
+using System.Text;
+using System.Text.Json;
+using System.Xml;
 using Microsoft.Extensions.Options;
 using Consyzer.Options;
-using Consyzer.Core.Models;
 using Consyzer.Output.Builders;
-using static Consyzer.Constants.Output;
+using Consyzer.Core.Models.Analysis;
+using Consyzer.Core.Models.Metadata;
+using Consyzer.Core.Models.Resolution;
+using static Consyzer.Output.Reporting.AnalysisReportStructure;
 
 namespace Consyzer.Output.Reporting;
 
 internal sealed class CsvReportWriter(
-    IOptions<AppOptions> options
-) : IReportWriter
+    IOptions<AppSettingsOptions> options
+) : FileReportWriterBase
 {
-    private readonly AppOptions.OutputOptions.CsvOptions _options = options.Value.Output.Csv;
+    private const string CsvExtension = ".csv";
 
-    public string Write(AnalysisOutcome outcome)
+    private readonly AppSettingsOptions.OutputOptions.CsvOptions _options = options.Value.Output.Csv;
+
+    protected override string FileExtension => CsvExtension;
+
+    protected override void WriteReport(AnalysisOutcome outcome, string fullPath)
     {
-        Directory.CreateDirectory(Destination.TargetDirectory);
-        var fullPath = Path.Combine(Destination.TargetDirectory, Destination.Csv);
-
         var encoding = Encoding.GetEncoding(_options.Encoding);
         var builder = new CsvTableBuilder(_options.Delimiter);
 
+        WriteAnalysisInfo(builder, outcome);
         WriteAssemblyMetadata(builder, outcome.AssemblyMetadataList);
         WritePInvokeGroups(builder, outcome.PInvokeMethodGroups);
-        WriteLibraryPresences(builder, outcome.LibraryPresences);
+        WriteLibraryResolutionResults(builder, outcome.LibraryResolutions);
         WriteSummary(builder, outcome.Summary);
 
         File.WriteAllText(fullPath, builder.Build(), encoding);
-
-        return fullPath;
     }
 
-    private void WriteAssemblyMetadata(CsvTableBuilder builder, IEnumerable<AssemblyMetadata> metadataList)
+    private static void WriteAnalysisInfo(CsvTableBuilder builder, AnalysisOutcome outcome)
     {
-        builder.Record([Structure.Section.Bracketed.AssemblyMetadataList]);
-        builder.Records(metadataList, SerializeValue);
+        builder.Record([Section.Bracketed.Analysis]);
+
+        builder.Header([Label.Analysis.Platform]);
+        builder.Record([SerializeValue(outcome.Platform)]);
         builder.Record([]);
     }
 
-    private void WritePInvokeGroups(CsvTableBuilder builder, IEnumerable<PInvokeMethodGroup> groups)
+    private static void WriteAssemblyMetadata(CsvTableBuilder builder, IEnumerable<AssemblyMetadata> metadataList)
     {
-        builder.Record([Structure.Section.Bracketed.PInvokeMethodGroups]);
+        builder.Record([Section.Bracketed.AssemblyMetadataList]);
 
-        var signatureProperties = typeof(MethodSignature).GetProperties();
+        builder.Header(
+        [
+            Label.Assembly.File,
+            Label.Assembly.Version,
+            Label.Assembly.CreationDateUtc,
+            Label.Assembly.Sha256
+        ]);
+
+        foreach (var metadata in metadataList)
+        {
+            builder.Record(
+            [
+                SerializeValue(metadata.File.FullName),
+                SerializeValue(metadata.Version),
+                SerializeValue(metadata.CreationDateUtc.ToString("O")),
+                SerializeValue(metadata.Sha256)
+            ]);
+        }
+
+        builder.Record([]);
+    }
+
+    private static void WritePInvokeGroups(CsvTableBuilder builder, IEnumerable<PInvokeMethodGroup> groups)
+    {
+        builder.Record([Section.Bracketed.PInvokeMethodGroups]);
+
         var signaturePrefix = nameof(PInvokeMethod.Signature);
 
-        var header = new List<string> { Structure.Label.PInvoke.File };
-        header.AddRange(signatureProperties.Select(p => $"{signaturePrefix}_{p.Name}"));
-        header.Add(Structure.Label.PInvoke.ImportName);
-        header.Add(Structure.Label.PInvoke.ImportFlags);
-
-        builder.Header(header);
+        builder.Header(
+        [
+            Label.PInvoke.File,
+            $"{signaturePrefix}_{Label.PInvoke.ReturnType}",
+            $"{signaturePrefix}_{Label.PInvoke.IsStatic}",
+            $"{signaturePrefix}_{Label.PInvoke.Namespace}",
+            $"{signaturePrefix}_{Label.PInvoke.Class}",
+            $"{signaturePrefix}_{Label.PInvoke.Method}",
+            $"{signaturePrefix}_{Label.PInvoke.MethodArguments}",
+            Label.PInvoke.ImportName,
+            Label.PInvoke.ImportFlags
+        ]);
 
         foreach (var group in groups)
         {
             foreach (var method in group.Methods)
             {
-                var record = new List<string> { SerializeValue(group.File.FullName) };
-                record.AddRange(signatureProperties.Select(p => SerializeValue(p.GetValue(method.Signature))));
-                record.Add(SerializeValue(method.ImportName));
-                record.Add(SerializeValue(method.ImportFlags.ToString()));
-
-                builder.Record(record);
+                builder.Record(
+                [
+                    SerializeValue(group.File.FullName),
+                    SerializeValue(method.Signature.ReturnType),
+                    SerializeValue(method.Signature.IsStatic),
+                    SerializeValue(method.Signature.Namespace),
+                    SerializeValue(method.Signature.Class),
+                    SerializeValue(method.Signature.Method),
+                    SerializeValue(method.Signature.MethodArguments),
+                    SerializeValue(method.ImportName),
+                    SerializeValue(method.ImportFlags.ToString())
+                ]);
             }
         }
 
         builder.Record([]);
     }
 
-    private void WriteLibraryPresences(CsvTableBuilder builder, IEnumerable<LibraryPresence> presences)
+    private static void WriteLibraryResolutionResults(
+        CsvTableBuilder builder,
+        IEnumerable<LibraryResolution> libraryResolutions)
     {
-        builder.Record([Structure.Section.Bracketed.LibraryPresences]);
-        builder.Records(presences, SerializeValue);
-        builder.Record([]);
-    }
+        builder.Record([Section.Bracketed.LibraryResolutionResults]);
 
-    private void WriteSummary(CsvTableBuilder builder, AnalysisSummary summary)
-    {
-        builder.Record([Structure.Section.Bracketed.Summary]);
-        builder.Records([summary], SerializeValue);
-        builder.Record([]);
-    }
+        builder.Header(
+        [
+            Label.Library.TargetPath,
+            Label.Library.Name,
+            Label.Library.ResolutionState,
+            Label.Library.ResolvedPath,
+            Label.Library.MechanismKind,
+            Label.Library.HeuristicCandidates,
+            Label.Library.NotSimulated
+        ]);
 
-    private string SerializeValue(object? value)
-    {
-        if (value is IEnumerable<string> strList && value is not string)
+        foreach (var libraryResolution in libraryResolutions)
         {
-            return EscapeList(strList);
+            builder.Record(
+            [
+                SerializeValue(libraryResolution.TargetPath),
+                SerializeValue(libraryResolution.LibraryName),
+                SerializeValue(libraryResolution.ResolutionState.ToString()),
+                SerializeValue(libraryResolution.ResolvedPresence?.Path),
+                SerializeValue(libraryResolution.ResolvedPresence?.MechanismKind.ToString()),
+                SerializeValue(libraryResolution.HeuristicCandidates),
+                SerializeValue(libraryResolution.NotSimulated.ToString())
+            ]);
         }
 
-        return EscapeValue(value?.ToString());
+        builder.Record([]);
     }
 
-    private string EscapeList(IEnumerable<string> items)
+    private static void WriteSummary(CsvTableBuilder builder, AnalysisSummary summary)
     {
-        var delimiter = _options.Delimiter;
-        var innerDelimiter = GetSafeInnerDelimiter(delimiter);
-        var safeItems = items.Select(i => (i ?? string.Empty).Replace(delimiter, ' '));
-        var joined = string.Join(innerDelimiter, safeItems);
-        return EscapeValue(joined);
+        builder.Record([Section.Bracketed.Summary]);
+
+        builder.Header(
+        [
+            Label.Summary.TotalFiles,
+            Label.Summary.EcmaAssemblies,
+            Label.Summary.AssembliesWithPInvoke,
+            Label.Summary.TotalPInvokeMethods,
+            Label.Summary.ResolvedLibraries,
+            Label.Summary.MissingLibraries,
+            Label.Summary.InconclusiveLibraries
+        ]);
+
+        builder.Record(
+        [
+            SerializeValue(summary.TotalFiles),
+            SerializeValue(summary.EcmaAssemblies),
+            SerializeValue(summary.AssembliesWithPInvoke),
+            SerializeValue(summary.TotalPInvokeMethods),
+            SerializeValue(summary.ResolvedLibraries),
+            SerializeValue(summary.MissingLibraries),
+            SerializeValue(summary.InconclusiveLibraries)
+        ]);
+
+        builder.Record([]);
     }
 
-    private static char GetSafeInnerDelimiter(char delimiter)
-        => delimiter switch
+    private static string SerializeValue(object? value)
+    {
+        if (value is IEnumerable<string> stringList)
         {
-            ';' => '|',
-            '|' => '/',
-            ',' => ';',
-            _ => ' '
-        };
+            return EscapeValue(JsonSerializer.Serialize(stringList));
+        }
+
+        return EscapeValue(
+            value is bool boolean 
+                ? XmlConvert.ToString(boolean)
+                : value?.ToString()
+        );
+    }
 
     private static string EscapeValue(string? value)
     {
-        if (string.IsNullOrEmpty(value)) return "\"\"";
-        return $"\"{value.Replace("\"", "\"\"").Replace('\n', ' ').Replace('\r', ' ')}\"";
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 }

@@ -2,5 +2,5 @@
 
 internal interface IFileClassifier<out TOut>
 {
-    TOut Check(IEnumerable<FileInfo> files);
+    TOut Classify(IEnumerable<FileInfo> files);
 }
